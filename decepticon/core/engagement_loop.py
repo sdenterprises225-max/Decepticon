@@ -92,6 +92,11 @@ class EngagementLoop:
             self._state.iteration,
             len(self._opplan.objectives),
         )
+        # Recover stale in-progress objectives from a previous crash/restart.
+        # The loop marks objectives IN_PROGRESS before invoking the agent and
+        # updates to COMPLETED/BLOCKED after. If the process dies between those
+        # two writes, the objective is orphaned and never retried.
+        self._recover_stale_objectives()
 
         try:
             while not self._state.is_complete:
@@ -155,18 +160,35 @@ class EngagementLoop:
         # Mark in-progress before invoking
         self._update_opplan_objective(obj.id, ObjectiveStatus.IN_PROGRESS)
 
-        response = await self._invoke_agent(agent_name, prompt)
-        result = self._parse_objective_result(response, obj, agent_name, start_time)
+        result: IterationResult
+        new_status: ObjectiveStatus
+        try:
+            response = await self._invoke_agent(agent_name, prompt)
+            result = self._parse_objective_result(response, obj, agent_name, start_time)
 
-        self._state.iteration_history.append(result)
+            self._state.iteration_history.append(result)
 
-        # Update objective status based on result
-        if result.outcome == "PASSED":
-            new_status = ObjectiveStatus.COMPLETED
-            self._state.objectives_completed.append(obj.id)
-        else:
+            if result.outcome == "PASSED":
+                new_status = ObjectiveStatus.COMPLETED
+                self._state.objectives_completed.append(obj.id)
+            else:
+                new_status = ObjectiveStatus.BLOCKED
+                self._state.objectives_blocked.append(obj.id)
+        except KeyboardInterrupt:
+            raise
+        except Exception as exc:
+            log.exception("Objective %s crashed mid-execution — marking BLOCKED", obj.id)
             new_status = ObjectiveStatus.BLOCKED
             self._state.objectives_blocked.append(obj.id)
+            result = IterationResult(
+                objective_id=obj.id,
+                agent_used=agent_name,
+                outcome="BLOCKED",
+                findings_produced=[],
+                duration_seconds=round(time.time() - start_time, 2),
+                raw_output=f"Exception: {exc}",
+            )
+            self._state.iteration_history.append(result)
 
         self._update_opplan_objective(obj.id, new_status)
 
@@ -729,6 +751,30 @@ class EngagementLoop:
         except (OSError, ValueError) as exc:
             log.error("Failed to update opplan objective %s: %s", obj_id, exc)
 
+
+    def _recover_stale_objectives(self) -> None:
+        """Reset any IN_PROGRESS objectives back to PENDING.
+
+        The engagement loop marks an objective IN_PROGRESS, invokes the agent,
+        then updates to COMPLETED or BLOCKED. If the process crashes between
+        the first and second write, the objective is left orphaned at
+        IN_PROGRESS. _next_pending_objective() only considers PENDING
+        objectives, so the orphan is never retried.
+
+        On startup, scan and reset so the loop can pick them up again.
+        """
+        if self._opplan is None:
+            return
+        stale = [o for o in self._opplan.objectives if o.status == ObjectiveStatus.IN_PROGRESS]
+        if not stale:
+            return
+        log.warning(
+            "Resetting %d stale IN_PROGRESS objective(s) to PENDING: %s",
+            len(stale),
+            ", ".join(o.id for o in stale),
+        )
+        for obj in stale:
+            self._update_opplan_objective(obj.id, ObjectiveStatus.PENDING)
 
 # ── Convenience entry point ────────────────────────────────────────────────────
 
