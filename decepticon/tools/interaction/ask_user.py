@@ -23,7 +23,6 @@ from langgraph.config import get_stream_writer
 from langgraph.types import interrupt
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
-
 # ── Argument coercers (resilience for local models) ───────────────────
 
 
