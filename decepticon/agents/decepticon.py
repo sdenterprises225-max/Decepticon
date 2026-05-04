@@ -50,14 +50,10 @@ from decepticon.core.config import load_config
 from decepticon.core.subagent_streaming import StreamingRunnable
 from decepticon.llm import LLMFactory
 from decepticon.middleware import (
-    AutoContextMiddleware,
     EngagementContextMiddleware,
     FilesystemMiddleware,
-    FindingGuardMiddleware,
     OPPLANMiddleware,
-    RoEGuardMiddleware,
     SkillsMiddleware,
-    SmartRetryMiddleware,
 )
 
 
@@ -206,15 +202,11 @@ def create_decepticon_agent():
 
     # Assemble middleware stack
     middleware = [
-        AutoContextMiddleware(),
         EngagementContextMiddleware(),
-        RoEGuardMiddleware(),
         SkillsMiddleware(backend=backend, sources=["/skills/decepticon/", "/skills/shared/"]),
         FilesystemMiddleware(backend=backend),
         SubAgentMiddleware(backend=backend, subagents=subagents),
-        FindingGuardMiddleware(),
         OPPLANMiddleware(),
-        SmartRetryMiddleware(),
     ]
     if fallback_models:
         middleware.append(ModelFallbackMiddleware(*fallback_models))
