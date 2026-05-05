@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -197,40 +196,52 @@ func TestValidateAuth_OAuthSubscriptions(t *testing.T) {
 	}
 }
 
-func TestValidateAuth_ChatGPTNativeOAuth(t *testing.T) {
-	t.Run("toggle on allows native device login without session cookie", func(t *testing.T) {
+func TestValidateAuth_ChatGPTCodexOAuth(t *testing.T) {
+	t.Run("toggle on requires Codex auth file", func(t *testing.T) {
 		home := t.TempDir()
 		t.Setenv("HOME", home)
 		env := map[string]string{"DECEPTICON_AUTH_CHATGPT": "true"}
+		if err := ValidateAuth(env); err == nil {
+			t.Errorf("expected ChatGPT OAuth to fail without Codex auth file")
+		}
+	})
+
+	t.Run("valid Codex auth file satisfies ChatGPT OAuth", func(t *testing.T) {
+		home := t.TempDir()
+		t.Setenv("HOME", home)
+		codexDir := filepath.Join(home, ".codex")
+		if err := os.MkdirAll(codexDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		auth := `{
+			"auth_mode": "chatgpt",
+			"tokens": {
+				"access_token": "access",
+				"refresh_token": "refresh",
+				"id_token": "id"
+			}
+		}`
+		if err := os.WriteFile(filepath.Join(codexDir, "auth.json"), []byte(auth), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		env := map[string]string{"DECEPTICON_AUTH_CHATGPT": "true"}
 		if err := ValidateAuth(env); err != nil {
-			t.Errorf("expected native ChatGPT OAuth to pass without launcher-side token input: %v", err)
+			t.Errorf("expected Codex ChatGPT auth to satisfy validation: %v", err)
 		}
 	})
 
-	t.Run("uses litellm auth.json path", func(t *testing.T) {
-		home := t.TempDir()
-		t.Setenv("HOME", home)
-		got := subscriptionTokenPaths(map[string]string{}, home, oauthSubscriptions["chatgpt"])
-		want := []string{filepath.Join(home, ".config", "litellm", "chatgpt", "auth.json")}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("unexpected ChatGPT token paths: got %v want %v", got, want)
+	t.Run("CODEX_HOME selects custom auth file", func(t *testing.T) {
+		codexHome := t.TempDir()
+		auth := `{"tokens":{"access_token":"access","refresh_token":"refresh","id_token":"id"}}`
+		if err := os.WriteFile(filepath.Join(codexHome, "auth.json"), []byte(auth), 0o600); err != nil {
+			t.Fatal(err)
 		}
-	})
-
-	t.Run("custom host token dir uses auth.json", func(t *testing.T) {
-		home := t.TempDir()
-		t.Setenv("HOME", home)
-		customDir := filepath.Join(home, "custom-chatgpt")
 		env := map[string]string{
-			"LITELLM_CHATGPT_TOKEN_DIR": customDir,
+			"DECEPTICON_AUTH_CHATGPT": "true",
+			"CODEX_HOME":              codexHome,
 		}
-		got := subscriptionTokenPaths(env, home, oauthSubscriptions["chatgpt"])
-		want := []string{
-			filepath.Join(customDir, "auth.json"),
-			filepath.Join(home, ".config", "litellm", "chatgpt", "auth.json"),
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("unexpected custom ChatGPT token paths: got %v want %v", got, want)
+		if err := ValidateAuth(env); err != nil {
+			t.Errorf("expected CODEX_HOME auth to satisfy validation: %v", err)
 		}
 	})
 }

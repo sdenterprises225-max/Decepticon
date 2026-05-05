@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -165,7 +163,7 @@ func runOnboard(cmd *cobra.Command, args []string) error {
 				Options(
 					huh.NewOption("Claude Code OAuth — Anthropic subscription (auth/*)", methodAnthropicOAuth),
 					huh.NewOption("Anthropic API Key — sk-ant-...", methodAnthropicAPI),
-					huh.NewOption("ChatGPT OAuth     — ChatGPT Pro/Plus/Team subscription (chatgpt/gpt-*)", methodOpenAIOAuth),
+					huh.NewOption("ChatGPT OAuth     — Codex CLI ChatGPT subscription (auth/gpt-*)", methodOpenAIOAuth),
 					huh.NewOption("OpenAI API Key    — sk-...", methodOpenAIAPI),
 					huh.NewOption("Google API Key    — AIza... (Gemini)", methodGoogleAPI),
 					huh.NewOption("MiniMax API Key   — eyJ...", methodMiniMaxAPI),
@@ -536,14 +534,6 @@ func runOnboard(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("write .env: %w", err)
 	}
 
-	if contains(methods, methodOpenAIOAuth) {
-		if synced, target, err := syncCodexChatGPTAuth(values); err != nil {
-			return err
-		} else if synced {
-			ui.DimText("Synced Codex ChatGPT auth to " + target)
-		}
-	}
-
 	// Summary
 	fmt.Println()
 	fmt.Println(ui.Green.Render("  ✓ Configuration saved"))
@@ -572,21 +562,6 @@ func nonEmpty(s string) error {
 		return fmt.Errorf("value is required")
 	}
 	return nil
-}
-
-func chatGPTTokenDir(env map[string]string) (string, error) {
-	tokenDir := strings.TrimSpace(config.Get(env, "LITELLM_CHATGPT_TOKEN_DIR", ""))
-	if tokenDir == "" {
-		tokenDir = strings.TrimSpace(os.Getenv("LITELLM_CHATGPT_TOKEN_DIR"))
-	}
-	if tokenDir != "" {
-		return tokenDir, nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("locate home directory for ChatGPT auth: %w", err)
-	}
-	return filepath.Join(home, ".config", "litellm", "chatgpt"), nil
 }
 
 func boolStr(b bool) string {

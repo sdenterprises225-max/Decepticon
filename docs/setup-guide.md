@@ -318,11 +318,11 @@ Use your ChatGPT Pro, Plus, or Team subscription instead of OpenAI API billing.
 
 **Supported tiers:**
 
-| Tier | Models Available (via `chatgpt/gpt-5.x` route) |
+| Tier | Models Available (via `auth/gpt-5.x` route) |
 |------|--------------------------------------------|
-| ChatGPT Plus ($20/mo) | `chatgpt/gpt-5.5`, `chatgpt/gpt-5.4` |
-| ChatGPT Pro ($200/mo) | `chatgpt/gpt-5.5`, `chatgpt/gpt-5.4` |
-| ChatGPT Team | `chatgpt/gpt-5.5`, `chatgpt/gpt-5.4` + admin controls |
+| ChatGPT Plus ($20/mo) | `auth/gpt-5.5`, `auth/gpt-5.4` |
+| ChatGPT Pro ($200/mo) | `auth/gpt-5.5`, `auth/gpt-5.4` |
+| ChatGPT Team | `auth/gpt-5.5`, `auth/gpt-5.4` + admin controls |
 
 **Setup:**
 
@@ -348,20 +348,19 @@ decepticon
 
 **How it works:**
 
-- Decepticon exposes ChatGPT subscription models as `chatgpt/gpt-5.5`
-  and `chatgpt/gpt-5.4`.
-- LiteLLM dynamic config maps those aliases to LiteLLM's native
-  `chatgpt/gpt-*` provider routes only when `DECEPTICON_AUTH_CHATGPT=true`.
-- `docker-compose.yml` mounts the host token directory into the LiteLLM
-  container at `/root/.config/litellm/chatgpt`.
-- Codex CLI remains the source of truth at `~/.codex/auth.json`. The launcher
-  syncs those tokens into LiteLLM's native
-  `~/.config/litellm/chatgpt/auth.json` format before startup.
+- Decepticon exposes ChatGPT subscription models as `auth/gpt-5.5`
+  and `auth/gpt-5.4`.
+- LiteLLM dynamic config registers those `auth/gpt-*` routes only when
+  `DECEPTICON_AUTH_CHATGPT=true`.
+- `docker-compose.yml` mounts the host Codex auth file into the LiteLLM
+  container at `/root/.codex/auth.json`.
+- Codex CLI remains the source of truth at `~/.codex/auth.json`. Decepticon's
+  custom `auth/gpt-*` handler reads and refreshes that file directly.
 
-**Custom token path:**
+**Custom Codex auth path:**
 
 ```bash
-LITELLM_CHATGPT_TOKEN_DIR=/custom/host/token/dir
+CODEX_HOME=/custom/codex/home
 ```
 
 ---
@@ -457,7 +456,7 @@ Complete list of all supported LLM providers and their pre-configured models:
 |----------|--------|-----------|------|
 | **Subscriptions (OAuth — no API billing)** | | | |
 | Claude Max/Pro/Team | Opus, Sonnet, Haiku | OAuth | $20–$100/mo |
-| ChatGPT Pro/Plus/Team | `chatgpt/gpt-5.5`, `chatgpt/gpt-5.4` | OAuth | $20–$200/mo |
+| ChatGPT Pro/Plus/Team | `auth/gpt-5.5`, `auth/gpt-5.4` | OAuth | $20–$200/mo |
 | Gemini Advanced | Gemini 2.5 Pro/Flash | OAuth | $20/mo |
 | Copilot Pro | `copilot/gpt-4o`, `copilot/o1`, `copilot/o3-mini` | OAuth | $20/mo |
 | SuperGrok | Grok-3, Grok-3 Mini | OAuth | X Premium+ |
@@ -845,8 +844,8 @@ cat ~/.claude/.credentials.json | python3 -c "import sys,json; d=json.load(sys.s
 **ChatGPT OAuth: missing or expired auth**
 
 Codex CLI credentials are the source of truth at `~/.codex/auth.json`.
-Re-authenticate Codex, then restart Decepticon so the launcher can sync those
-tokens into LiteLLM's native `~/.config/litellm/chatgpt/auth.json` format.
+Run `codex logout` and `codex login`, then restart Decepticon so the
+`auth/gpt-*` handler can read fresh tokens.
 
 **API Key: "401 Unauthorized"**
 

@@ -185,7 +185,7 @@ def requires_dynamic_config(env: Mapping[str, str] | None = None) -> bool:
     user-requested model routes (DECEPTICON_MODEL*, OLLAMA_MODEL) and gated
     subscription OAuth routes (DECEPTICON_AUTH_*). ChatGPT OAuth commonly has
     no DECEPTICON_MODEL* override, so checking only requested models skips the
-    chatgpt/* subscription routes entirely.
+    auth/gpt-* subscription routes entirely.
     """
     return bool(collect_requested_models(env) or collect_enabled_subscription_flags(env))
 
@@ -259,7 +259,7 @@ def build_model_entry(model_name: str) -> dict[str, Any]:
 
 # ── Subscription OAuth routes ───────────────────────────────────────────
 # These were previously static in litellm.yaml. LiteLLM's native providers
-# (chatgpt, gemini-sub, copilot, grok-sub, pplx-sub) attempt OAuth
+# (auth/gpt-*, gemini-sub, copilot, grok-sub, pplx-sub) attempt OAuth
 # handshakes at startup when they see their routes. If the user hasn't
 # enabled the auth method, the handshake blocks → times out → container
 # becomes unhealthy. Gating on DECEPTICON_AUTH_* prevents that.
@@ -267,8 +267,8 @@ def build_model_entry(model_name: str) -> dict[str, Any]:
 _SUBSCRIPTION_ROUTES: dict[str, list[dict[str, Any]]] = {
     # env flag → model_list entries
     "DECEPTICON_AUTH_CHATGPT": [
-        {"model_name": "chatgpt/gpt-5.5", "litellm_params": {"model": "chatgpt/gpt-5.5"}},
-        {"model_name": "chatgpt/gpt-5.4", "litellm_params": {"model": "chatgpt/gpt-5.4"}},
+        {"model_name": "auth/gpt-5.5", "litellm_params": {"model": "auth/gpt-5.5"}},
+        {"model_name": "auth/gpt-5.4", "litellm_params": {"model": "auth/gpt-5.4"}},
     ],
     "DECEPTICON_AUTH_GEMINI": [
         {
@@ -297,7 +297,7 @@ _SUBSCRIPTION_ROUTES: dict[str, list[dict[str, Any]]] = {
 # Fallback entries for subscription routes — appended to litellm_settings.fallbacks
 _SUBSCRIPTION_FALLBACKS: dict[str, list[dict[str, list[str]]]] = {
     "DECEPTICON_AUTH_CHATGPT": [
-        {"chatgpt/gpt-5.5": ["chatgpt/gpt-5.4"]},
+        {"auth/gpt-5.5": ["auth/gpt-5.4"]},
     ],
     "DECEPTICON_AUTH_GEMINI": [
         {"gemini-sub/gemini-2.5-pro": ["gemini-sub/gemini-2.5-flash"]},

@@ -150,11 +150,11 @@ def test_merge_dynamic_models_registers_only_supported_chatgpt_oauth_routes() ->
         entry["model_name"]: entry["litellm_params"]["model"] for entry in merged["model_list"]
     }
     assert routes == {
-        "chatgpt/gpt-5.5": "chatgpt/gpt-5.5",
-        "chatgpt/gpt-5.4": "chatgpt/gpt-5.4",
+        "auth/gpt-5.5": "auth/gpt-5.5",
+        "auth/gpt-5.4": "auth/gpt-5.4",
     }
     assert all("gpt-5-nano" not in model for model in routes)
-    assert merged["litellm_settings"]["fallbacks"] == [{"chatgpt/gpt-5.5": ["chatgpt/gpt-5.4"]}]
+    assert merged["litellm_settings"]["fallbacks"] == [{"auth/gpt-5.5": ["auth/gpt-5.4"]}]
 
 
 def test_requires_dynamic_config_for_subscription_oauth_without_model_override() -> None:

@@ -264,20 +264,6 @@ def _model_drops_temperature(model: str) -> bool:
     return slug.startswith("claude-opus-4")
 
 
-def _model_uses_chatgpt_responses_api(model: str) -> bool:
-    """Return True for Codex/OpenAI OAuth models routed via LiteLLM chatgpt.
-
-    LiteLLM's native ChatGPT/Codex OAuth provider is healthy on the Responses
-    API path (``/backend-api/codex/responses``). The Chat Completions path can
-    hang or hit Cloudflare challenges, while the official Codex CLI also uses
-    the Responses-style backend. Force LangChain's ChatOpenAI wrapper onto
-    Responses API for ChatGPT subscription routes.
-    """
-
-    lowered = model.lower()
-    return lowered.startswith("chatgpt/gpt-")
-
-
 def _model_is_deepseek_thinking(model: str) -> bool:
     """Return True for DeepSeek V4 Pro and legacy deepseek-reasoner.
 
@@ -480,13 +466,11 @@ def _reraise_with_actionable_message(exc: Exception, model_name: str) -> None:
     msg = str(exc)
     msg_lower = msg.lower()
 
-    if "token_invalidated" in msg_lower and model_name.lower().startswith("chatgpt/"):
+    if "token_invalidated" in msg_lower and model_name.lower().startswith("auth/gpt-"):
         raise RuntimeError(
-            f"ChatGPT authentication for model '{model_name}' was invalidated "
-            f"by OpenAI (401). Re-authenticate Codex so ~/.codex/auth.json "
-            f"has fresh tokens, then restart Decepticon so the launcher can sync "
-            f"them into ~/.config/litellm/chatgpt/auth.json.\n"
-            f"Underlying: {msg}"
+            f"Codex ChatGPT authentication for model '{model_name}' was "
+            f"invalidated by OpenAI (401). Run 'codex logout' and "
+            f"'codex login', then restart Decepticon.\nUnderlying: {msg}"
         ) from exc
 
     # LiteLLM puts a recognizable prefix in the inner message when the
@@ -662,9 +646,6 @@ class LLMFactory:
             kwargs["disabled_params"] = {"temperature": None}
         else:
             kwargs["temperature"] = temperature
-        if _model_uses_chatgpt_responses_api(model):
-            kwargs["use_responses_api"] = True
-            kwargs["output_version"] = "responses/v1"
         if _model_is_deepseek_thinking(model):
             return _DeepSeekThinkingChatOpenAI(**kwargs)
         return _ProxiedChatOpenAI(**kwargs)

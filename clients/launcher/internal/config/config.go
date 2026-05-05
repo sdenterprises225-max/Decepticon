@@ -244,9 +244,9 @@ func ValidateAPIKeys(env map[string]string) error {
 //     instead of a single session token. accept either env name.
 //   - Copilot Pro uses a refresh-token rotation (COPILOT_REFRESH_TOKEN)
 //     instead of a session cookie. Same fall-through, different env name.
-//   - ChatGPT uses LiteLLM's native chatgpt provider. The launcher syncs
-//     Codex CLI credentials from ~/.codex/auth.json into LiteLLM's auth.json,
-//     so the launcher must not require a pasted browser session cookie.
+//   - ChatGPT uses Decepticon's auth/gpt-* custom handler. It reads the
+//     Codex CLI credential store at ~/.codex/auth.json, so the launcher must
+//     not require a pasted browser session cookie.
 type subscriptionMethod struct {
 	Toggle                string   // DECEPTICON_AUTH_<X> boolean enabling this path
 	TokenEnvs             []string // env vars that satisfy the path on their own
@@ -260,12 +260,8 @@ type subscriptionMethod struct {
 
 var oauthSubscriptions = map[string]subscriptionMethod{
 	"chatgpt": {
-		Toggle:                "DECEPTICON_AUTH_CHATGPT",
-		ConfigDir:             "litellm/chatgpt",
-		TokenFile:             "auth.json",
-		DirEnv:                "LITELLM_CHATGPT_TOKEN_DIR",
-		Label:                 "ChatGPT",
-		AllowInteractiveLogin: true,
+		Toggle: "DECEPTICON_AUTH_CHATGPT",
+		Label:  "ChatGPT",
 	},
 	"gemini": {
 		Toggle:    "DECEPTICON_AUTH_GEMINI",
@@ -300,8 +296,8 @@ var oauthSubscriptions = map[string]subscriptionMethod{
 //     ~/.claude/.credentials.json. LiteLLM mounts that file read-only.
 //   - DECEPTICON_AUTH_<X>=true (CHATGPT, GEMINI, COPILOT, GROK,
 //     PERPLEXITY) is satisfied by a token env var or a token file at its
-//     mounted token directory. ChatGPT is allowed through because Codex CLI
-//     credentials are synced into LiteLLM's native auth store at startup.
+//     mounted token directory. ChatGPT is satisfied by Codex CLI credentials
+//     at ~/.codex/auth.json (or CODEX_HOME/auth.json).
 //
 // Local LLM path: ollama_local in DECEPTICON_AUTH_PRIORITY (or any
 // OLLAMA_API_BASE configured) is treated as a valid credential. Ollama
@@ -329,6 +325,12 @@ func ValidateAuth(env map[string]string) error {
 		if !isTruthy(Get(env, sub.Toggle, "")) {
 			continue
 		}
+		if sub.Label == "ChatGPT" {
+			if err := validateCodexCredentials(env); err == nil {
+				return nil
+			}
+			continue
+		}
 		if err := validateSubscriptionCredentials(env, sub); err == nil {
 			return nil
 		}
@@ -347,6 +349,9 @@ func ValidateAuth(env map[string]string) error {
 	for _, key := range []string{"chatgpt", "gemini", "copilot", "grok", "perplexity"} {
 		sub := oauthSubscriptions[key]
 		if isTruthy(Get(env, sub.Toggle, "")) {
+			if sub.Label == "ChatGPT" {
+				return validateCodexCredentials(env)
+			}
 			return validateSubscriptionCredentials(env, sub)
 		}
 	}
@@ -399,6 +404,57 @@ func isTruthy(s string) bool {
 		return true
 	}
 	return false
+}
+
+func validateCodexCredentials(env map[string]string) error {
+	path, err := codexAuthPath(env)
+	if err != nil {
+		return err
+	}
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("Codex ChatGPT credentials not found at %s\nRun 'codex login' to authenticate, then retry.", path)
+	}
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", path, err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("expected Codex ChatGPT credentials file at %s but found a directory", path)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", path, err)
+	}
+	var auth struct {
+		Tokens struct {
+			AccessToken  string `json:"access_token"`
+			RefreshToken string `json:"refresh_token"`
+			IDToken      string `json:"id_token"`
+		} `json:"tokens"`
+	}
+	if err := json.Unmarshal(raw, &auth); err != nil {
+		return fmt.Errorf("Codex ChatGPT credentials at %s are not valid JSON: %w", path, err)
+	}
+	if strings.TrimSpace(auth.Tokens.AccessToken) == "" ||
+		strings.TrimSpace(auth.Tokens.RefreshToken) == "" ||
+		strings.TrimSpace(auth.Tokens.IDToken) == "" {
+		return fmt.Errorf("Codex ChatGPT credentials at %s are missing tokens. Run 'codex login' to re-authenticate.", path)
+	}
+	return nil
+}
+
+func codexAuthPath(env map[string]string) (string, error) {
+	if explicit := strings.TrimSpace(Get(env, "CODEX_AUTH_PATH", os.Getenv("CODEX_AUTH_PATH"))); explicit != "" {
+		return explicit, nil
+	}
+	if codexHome := strings.TrimSpace(Get(env, "CODEX_HOME", os.Getenv("CODEX_HOME"))); codexHome != "" {
+		return filepath.Join(codexHome, "auth.json"), nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("locate home directory: %w", err)
+	}
+	return filepath.Join(home, ".codex", "auth.json"), nil
 }
 
 // validateClaudeCredentials verifies ~/.claude/.credentials.json exists, is a regular

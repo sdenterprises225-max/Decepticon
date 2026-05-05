@@ -343,15 +343,14 @@ class TestActionableErrorTranslation:
             "Error code: 401 - {'error': {'message': 'Your authentication token "
             "has been invalidated. Please try signing in again.', "
             "'code': 'token_invalidated'}} No fallback model group found for "
-            "original model_group=chatgpt/gpt-5.4."
+            "original model_group=auth/gpt-5.4."
         )
         with pytest.raises(RuntimeError) as info:
-            self._translate(exc, "chatgpt/gpt-5.4")
+            self._translate(exc, "auth/gpt-5.4")
         msg = str(info.value)
-        assert "ChatGPT authentication" in msg
+        assert "Codex ChatGPT authentication" in msg
         assert "invalidated" in msg
-        assert "~/.codex/auth.json" in msg
-        assert "~/.config/litellm/chatgpt/auth.json" in msg
+        assert "codex login" in msg
 
     def test_400_bad_request_branch(self):
         # openai.BadRequestError carries 'Error code: 400' in repr.

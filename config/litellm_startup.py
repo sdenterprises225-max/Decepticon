@@ -93,6 +93,7 @@ from typing import Any  # noqa: E402
 
 import litellm  # noqa: E402
 from claude_code_handler import claude_code_handler_instance  # noqa: E402
+from codex_chatgpt_handler import codex_chatgpt_handler_instance  # noqa: E402
 from copilot_handler import copilot_handler_instance  # noqa: E402
 from gemini_handler import gemini_sub_handler_instance  # noqa: E402
 from grok_handler import grok_sub_handler_instance  # noqa: E402
@@ -101,8 +102,8 @@ from perplexity_handler import perplexity_sub_handler_instance  # noqa: E402
 
 # ── auth/ provider dispatcher ─────────────────────────────────────────
 # The ``auth/`` namespace is reserved for custom OAuth handlers that do
-# not have a suitable native LiteLLM provider. ChatGPT/Codex OAuth now uses
-# LiteLLM's native ``chatgpt`` provider via model aliases in litellm.yaml.
+# not have a suitable native LiteLLM provider or need to share an external
+# CLI credential store.
 
 
 def _select_auth_handler(model: str) -> CustomLLM:
@@ -110,10 +111,12 @@ def _select_auth_handler(model: str) -> CustomLLM:
     slug_lower = slug.lower()
     if slug_lower.startswith("claude-"):
         return claude_code_handler_instance
+    if slug_lower.startswith("gpt-"):
+        return codex_chatgpt_handler_instance
     raise litellm.BadRequestError(
         message=(
             f"auth/ provider: model slug {slug!r} did not match any known "
-            "subscription handler. Supported prefixes: claude-*."
+            "subscription handler. Supported prefixes: claude-*, gpt-*."
         ),
         model=model,
         llm_provider="auth",
@@ -298,7 +301,7 @@ def _patch_chatgpt_responses_text_aggregation() -> None:
 _patch_chatgpt_responses_text_aggregation()
 
 print(
-    "[decepticon] auth dispatcher (claude_code) + 4 subscription handlers registered",
+    "[decepticon] auth dispatcher (claude_code, codex_chatgpt) + 4 subscription handlers registered",
     flush=True,
 )
 

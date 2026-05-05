@@ -105,12 +105,11 @@ func runStart(cmd *cobra.Command, args []string) error {
 		_ = os.Setenv("CLAUDE_CREDENTIALS_VOLUME", "/dev/null")
 	}
 
-	if strings.EqualFold(strings.TrimSpace(config.Get(env, "DECEPTICON_AUTH_CHATGPT", "")), "true") {
-		if synced, target, err := syncCodexChatGPTAuth(env); err != nil {
-			return err
-		} else if synced {
-			ui.DimText("Synced Codex ChatGPT auth to " + target)
-		}
+	codexAuthPath := resolveCodexAuthPath(env)
+	if _, statErr := os.Stat(codexAuthPath); statErr == nil {
+		_ = os.Setenv("CODEX_AUTH_VOLUME", codexAuthPath)
+	} else {
+		_ = os.Setenv("CODEX_AUTH_VOLUME", "/dev/null")
 	}
 
 	// 2.5. Update notice. Applying updates is intentionally explicit via
@@ -174,6 +173,16 @@ func runStart(cmd *cobra.Command, args []string) error {
 
 	ui.DimText("CLI exited. Services kept running — run 'decepticon stop' to shut down.")
 	return nil
+}
+
+func resolveCodexAuthPath(env map[string]string) string {
+	if explicit := strings.TrimSpace(config.Get(env, "CODEX_AUTH_PATH", os.Getenv("CODEX_AUTH_PATH"))); explicit != "" {
+		return explicit
+	}
+	if codexHome := strings.TrimSpace(config.Get(env, "CODEX_HOME", os.Getenv("CODEX_HOME"))); codexHome != "" {
+		return filepath.Join(codexHome, "auth.json")
+	}
+	return filepath.Join(os.Getenv("HOME"), ".codex", "auth.json")
 }
 
 // probeOllamaIfSelected does a best-effort GET on /api/tags to verify the

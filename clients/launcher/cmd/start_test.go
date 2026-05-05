@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -25,6 +26,19 @@ func TestCandidateProbeURLs_NonDockerHostPassesThrough(t *testing.T) {
 	want := []string{"http://10.0.0.5:11434"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("non-docker host should pass through; got %v want %v", got, want)
+	}
+}
+
+func TestResolveCodexAuthPath(t *testing.T) {
+	t.Setenv("HOME", "/home/tester")
+	if got := resolveCodexAuthPath(map[string]string{}); got != "/home/tester/.codex/auth.json" {
+		t.Fatalf("default path = %q", got)
+	}
+	if got := resolveCodexAuthPath(map[string]string{"CODEX_HOME": "/tmp/codex"}); got != filepath.Join("/tmp/codex", "auth.json") {
+		t.Fatalf("CODEX_HOME path = %q", got)
+	}
+	if got := resolveCodexAuthPath(map[string]string{"CODEX_AUTH_PATH": "/tmp/auth.json"}); got != "/tmp/auth.json" {
+		t.Fatalf("CODEX_AUTH_PATH path = %q", got)
 	}
 }
 
