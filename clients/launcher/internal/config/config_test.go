@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -146,10 +147,8 @@ func TestValidateAPIKeys_AcceptsAllProviders(t *testing.T) {
 	}
 }
 
-// TestValidateAuth_OAuthSubscriptions verifies each subscription handler
-// (ChatGPT / Gemini Advanced / Copilot Pro / SuperGrok / Perplexity Pro) accepts
-// any of its supported credential surfaces — env token or tokens.json.
-// Mirrors the resolution order in config/<provider>_handler.py.
+// TestValidateAuth_OAuthSubscriptions verifies each custom subscription handler
+// accepts any of its supported credential surfaces — env token or tokens.json.
 func TestValidateAuth_OAuthSubscriptions(t *testing.T) {
 	cases := []struct {
 		toggle    string
@@ -157,7 +156,6 @@ func TestValidateAuth_OAuthSubscriptions(t *testing.T) {
 		configDir string
 		fileFmt   string
 	}{
-		{"DECEPTICON_AUTH_CHATGPT", "CHATGPT_SESSION_TOKEN", filepath.Join("litellm", "chatgpt"), "tokens.json"},
 		{"DECEPTICON_AUTH_GEMINI", "GEMINI_SESSION_COOKIES", "gemini", "tokens.json"},
 		{"DECEPTICON_AUTH_COPILOT", "COPILOT_REFRESH_TOKEN", "copilot", "tokens.json"},
 		{"DECEPTICON_AUTH_GROK", "GROK_SESSION_TOKEN", "grok", "tokens.json"},
@@ -199,37 +197,40 @@ func TestValidateAuth_OAuthSubscriptions(t *testing.T) {
 	}
 }
 
-func TestValidateAuth_ChatGPTTokenPathCompatibility(t *testing.T) {
-	t.Run("custom litellm token dir", func(t *testing.T) {
+func TestValidateAuth_ChatGPTNativeOAuth(t *testing.T) {
+	t.Run("toggle on allows native device login without session cookie", func(t *testing.T) {
 		home := t.TempDir()
 		t.Setenv("HOME", home)
-		dir := filepath.Join(home, "custom-chatgpt")
-		t.Setenv("LITELLM_CHATGPT_TOKEN_DIR", dir)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, "tokens.json"), []byte("{}"), 0o600); err != nil {
-			t.Fatal(err)
-		}
 		env := map[string]string{"DECEPTICON_AUTH_CHATGPT": "true"}
 		if err := ValidateAuth(env); err != nil {
-			t.Errorf("expected LITELLM_CHATGPT_TOKEN_DIR tokens.json to satisfy ChatGPT auth: %v", err)
+			t.Errorf("expected native ChatGPT OAuth to pass without launcher-side token input: %v", err)
 		}
 	})
 
-	t.Run("legacy chatgpt token dir", func(t *testing.T) {
+	t.Run("uses litellm auth.json path", func(t *testing.T) {
 		home := t.TempDir()
 		t.Setenv("HOME", home)
-		dir := filepath.Join(home, ".config", "chatgpt")
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatal(err)
+		got := subscriptionTokenPaths(map[string]string{}, home, oauthSubscriptions["chatgpt"])
+		want := []string{filepath.Join(home, ".config", "litellm", "chatgpt", "auth.json")}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("unexpected ChatGPT token paths: got %v want %v", got, want)
 		}
-		if err := os.WriteFile(filepath.Join(dir, "tokens.json"), []byte("{}"), 0o600); err != nil {
-			t.Fatal(err)
+	})
+
+	t.Run("custom host token dir uses auth.json", func(t *testing.T) {
+		home := t.TempDir()
+		t.Setenv("HOME", home)
+		customDir := filepath.Join(home, "custom-chatgpt")
+		env := map[string]string{
+			"LITELLM_CHATGPT_TOKEN_DIR": customDir,
 		}
-		env := map[string]string{"DECEPTICON_AUTH_CHATGPT": "true"}
-		if err := ValidateAuth(env); err != nil {
-			t.Errorf("expected legacy ~/.config/chatgpt/tokens.json to satisfy ChatGPT auth: %v", err)
+		got := subscriptionTokenPaths(env, home, oauthSubscriptions["chatgpt"])
+		want := []string{
+			filepath.Join(customDir, "auth.json"),
+			filepath.Join(home, ".config", "litellm", "chatgpt", "auth.json"),
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("unexpected custom ChatGPT token paths: got %v want %v", got, want)
 		}
 	})
 }

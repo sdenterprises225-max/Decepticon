@@ -70,7 +70,7 @@ func (c *Compose) readVersion() string {
 func (c *Compose) composeEnv() []string {
 	env := os.Environ()
 	if v := c.readVersion(); v != "" {
-		env = append(env, "DECEPTICON_VERSION="+v)
+		env = append(env, "DECEPTICON_VERSION="+imageTag(v))
 	}
 	return env
 }
@@ -145,7 +145,7 @@ func (c *Compose) DownAndPurge() error {
 func (c *Compose) Pull(version string) error {
 	cmd := exec.Command("docker", append(c.baseArgs(), "pull")...)
 	if version != "" {
-		cmd.Env = append(os.Environ(), "DECEPTICON_VERSION="+version)
+		cmd.Env = append(os.Environ(), "DECEPTICON_VERSION="+imageTag(version))
 	} else {
 		cmd.Env = c.composeEnv()
 	}
@@ -155,6 +155,10 @@ func (c *Compose) Pull(version string) error {
 		return fmt.Errorf("docker compose pull: %w", err)
 	}
 	return nil
+}
+
+func imageTag(version string) string {
+	return strings.TrimPrefix(strings.TrimSpace(version), "v")
 }
 
 // Ps shows service status.
