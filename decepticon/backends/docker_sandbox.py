@@ -50,7 +50,7 @@ def _docker_cfg():
 PS1_PATTERN = re.compile(r"\[DCPTN:(\d+):(.+?)\]")
 
 POLL_INTERVAL: float = 0.5
-STALL_SECONDS: float = 3.0
+STALL_SECONDS: float = 5.0
 MAX_OUTPUT_CHARS: int = 30_000
 AUTO_BACKGROUND_SECONDS: float = 60.0
 SIZE_WATCHDOG_CHARS: int = 5_000_000
