@@ -33,6 +33,7 @@ from decepticon.middleware.skills import DecepticonSkillsMiddleware
 from decepticon.tools.bash import BASH_TOOLS
 from decepticon.tools.bash.bash import set_sandbox
 from decepticon.tools.references.tools import killchain_lookup, oneliner_search
+from decepticon.tools.research.exploit_spec_writer import exploit_spec_register
 from decepticon.tools.research.tools import (
     kg_add_edge,
     kg_add_node,
@@ -113,6 +114,8 @@ def create_recon_agent():
         # References
         oneliner_search,
         killchain_lookup,
+        # Vaccine: register machine-readable exploit spec for env-grounded re-attack
+        exploit_spec_register,
         # Execution
         *BASH_TOOLS,
     ]

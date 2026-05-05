@@ -32,6 +32,7 @@ from decepticon.middleware import (
 from decepticon.middleware.skills import DecepticonSkillsMiddleware
 from decepticon.tools.bash import BASH_TOOLS
 from decepticon.tools.bash.bash import set_sandbox
+from decepticon.tools.research.exploit_spec_writer import exploit_spec_register
 from decepticon.tools.research.scanner_tools import SCANNER_TOOLS
 from decepticon.tools.research.tools import kg_query, kg_stats
 
@@ -84,7 +85,7 @@ def create_scanner_agent():
 
     # Tight tool surface: sharded scanner helpers + minimal KG read access +
     # bash for directory sizing only. NO vuln analysis tools.
-    tools = [*SCANNER_TOOLS, kg_query, kg_stats, *BASH_TOOLS]
+    tools = [*SCANNER_TOOLS, kg_query, kg_stats, exploit_spec_register, *BASH_TOOLS]
 
     agent = create_agent(
         llm,

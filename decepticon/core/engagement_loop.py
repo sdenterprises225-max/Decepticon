@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 import uuid
@@ -35,6 +36,7 @@ from decepticon.core.engagement import (
     IterationResult,
     VaccineMode,
 )
+from decepticon.core.env_verifier import EnvironmentVerifier
 from decepticon.core.logging import get_logger
 from decepticon.core.schemas import OPPLAN, Objective, ObjectiveStatus
 from decepticon.schemas.defense_brief import (
@@ -44,6 +46,9 @@ from decepticon.schemas.defense_brief import (
     ReAttackOutcome,
     VerificationResult,
 )
+from decepticon.schemas.env_verification import CheckPhase
+from decepticon.tools.bash.bash import get_sandbox
+from decepticon.tools.research.poc import sandbox_runner
 
 log = get_logger("core.engagement_loop")
 
@@ -56,6 +61,12 @@ class EngagementLoop:
         self._config = config
         self._state: EngagementState | None = None
         self._opplan: OPPLAN | None = None
+        sandbox = get_sandbox()
+        self._verifier: EnvironmentVerifier | None = (
+            EnvironmentVerifier(self._workspace, sandbox_runner(sandbox))
+            if sandbox is not None
+            else None
+        )
 
     async def run(self) -> EngagementState:
         """Main loop — executes attack and vaccine phases.
@@ -280,11 +291,21 @@ class EngagementLoop:
                 "Signal DEFENSE COMPLETE or DEFENSE FAILED when done."
             )
 
+            # Pre-defense environment snapshot for grounded verification
+            use_env = os.environ.get("VACCINE_USE_ENV_VERIFIER", "1") != "0"
+            if use_env and self._verifier is not None:
+                spec = self._verifier.load_spec(finding_ref)
+                if spec is not None:
+                    pre = await self._verifier.capture_state(
+                        spec, phase=CheckPhase.PRE_DEFENSE
+                    )
+                    self._verifier.persist_snapshot(pre)
+
             log.info("Invoking defender agent for %s", finding_ref)
             await self._invoke_agent("defender", defense_prompt)
 
-            # Load and log verification result written by the defender agent
-            result = self._load_verification_result(finding_ref)
+            # Env-grounded verification first; fall back to legacy LLM result
+            result = await self._verify_finding_env(finding_ref)
             if result is not None:
                 if result.re_attack_outcome == ReAttackOutcome.BLOCKED:
                     log.info("Defense VERIFIED for %s — re-attack blocked", finding_ref)
@@ -297,9 +318,37 @@ class EngagementLoop:
             else:
                 log.warning(
                     "No verification result for %s after defender ran — "
-                    "defense agent may not have written verification-{finding_ref}.json",
+                    "defense agent may not have written verification-%s.json",
+                    finding_ref,
                     finding_ref,
                 )
+
+    async def _verify_finding_env(self, finding_ref: str) -> VerificationResult | None:
+        """Try env-grounded verification first; fall back to legacy LLM result."""
+        use_env = os.environ.get("VACCINE_USE_ENV_VERIFIER", "1") != "0"
+        if use_env and self._verifier is not None:
+            spec = self._verifier.load_spec(finding_ref)
+            if spec is not None:
+                post = await self._verifier.capture_state(
+                    spec, phase=CheckPhase.POST_DEFENSE
+                )
+                pre = self._verifier.load_snapshot(finding_ref, CheckPhase.PRE_DEFENSE)
+                evidence = await self._verifier.verify_blocked(
+                    spec, pre=pre, post=post
+                )
+                reward = self._verifier.compute_reward(evidence)
+                self._verifier.persist_evidence(evidence)
+                self._verifier.persist_reward(reward)
+                return VerificationResult(
+                    finding_ref=finding_ref,
+                    defense_actions_applied=[],
+                    re_attack_outcome=evidence.re_attack_outcome,
+                    re_attack_details=(
+                        f"env-verified reward={reward.reward:.1f} "
+                        f"poc_hash={evidence.poc_evidence.output_hash}"
+                    ),
+                )
+        return self._load_verification_result(finding_ref)
 
     def _scan_findings(self) -> list[str]:
         """Scan workspace/findings/ for FIND-*.md files.

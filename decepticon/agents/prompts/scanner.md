@@ -73,3 +73,8 @@ that explicitly via the `extensions` parameter (`"sol"`).
 - Do NOT speculate about exploitability in candidate reasons. State the facts:
   sink kind, nearby source, file path. Leave judgment to the Detector.
 </WHAT_NOT_TO_DO>
+
+
+## Vaccine Loop: Register Exploit Specs
+
+After writing FIND-NNN.md for a successful exploit, call `exploit_spec_register` with a self-contained `poc_command`, at least one `success_pattern` (regex matched against PoC stdout/stderr), and `target_checks` for any environment state the exploit depends on (PortCheck/ServiceCheck/CommandOutputCheck/CredentialCheck/FileCheck). Provide a `negative_command` (ZFP baseline) when feasible. The EnvironmentVerifier replays this spec after defenses are applied to produce a grounded RLVR reward — no LLM judges the outcome.

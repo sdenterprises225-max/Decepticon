@@ -15,12 +15,14 @@ is reached.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from decepticon.core.env_verifier import EnvironmentVerifier
 from decepticon.core.logging import get_logger
 from decepticon.schemas.defense_brief import (
     DefenseActionResult,
@@ -30,6 +32,9 @@ from decepticon.schemas.defense_brief import (
     ReAttackOutcome,
     VerificationResult,
 )
+from decepticon.schemas.env_verification import CheckPhase
+from decepticon.tools.bash.bash import get_sandbox
+from decepticon.tools.research.poc import sandbox_runner
 
 log = get_logger("orchestrator")
 
@@ -84,10 +89,24 @@ class VaccineOrchestrator:
         state = await orchestrator.run()
     """
 
-    def __init__(self, workspace: Path, state: OrchestratorState | None = None) -> None:
+    def __init__(
+        self,
+        workspace: Path,
+        state: OrchestratorState | None = None,
+        verifier: EnvironmentVerifier | None = None,
+    ) -> None:
         self.workspace = workspace
-        self.state: OrchestratorState = state if state is not None else OrchestratorState()
         self._state_path = workspace / ".vaccine-state.json"
+        self.state: OrchestratorState = state if state is not None else (self._load_state() or OrchestratorState())
+        if verifier is not None:
+            self._verifier: EnvironmentVerifier | None = verifier
+        else:
+            sandbox = get_sandbox()
+            self._verifier = (
+                EnvironmentVerifier(workspace, sandbox_runner(sandbox))
+                if sandbox is not None
+                else None
+            )
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
@@ -150,7 +169,7 @@ class VaccineOrchestrator:
 
                 # Phase 4: Verification
                 state.phase = OrchestratorPhase.VERIFICATION
-                result = self._load_verification_result(finding_ref)
+                result = await self._verify_finding(finding_ref)
                 if result is not None:
                     state.verification_results.append(result)
                     if result.re_attack_outcome == ReAttackOutcome.BLOCKED:
@@ -478,6 +497,33 @@ class VaccineOrchestrator:
         except (OSError, ValueError) as exc:
             log.error("Failed to load verification result %s: %s", result_path, exc)
             return None
+
+    async def _verify_finding(self, finding_ref: str) -> VerificationResult | None:
+        """Try env-grounded verification first; fall back to legacy LLM result."""
+        use_env = os.environ.get("VACCINE_USE_ENV_VERIFIER", "1") != "0"
+        if use_env and self._verifier is not None:
+            spec = self._verifier.load_spec(finding_ref)
+            if spec is not None:
+                post = await self._verifier.capture_state(
+                    spec, phase=CheckPhase.POST_DEFENSE
+                )
+                pre = self._verifier.load_snapshot(finding_ref, CheckPhase.PRE_DEFENSE)
+                evidence = await self._verifier.verify_blocked(
+                    spec, pre=pre, post=post
+                )
+                reward = self._verifier.compute_reward(evidence)
+                self._verifier.persist_evidence(evidence)
+                self._verifier.persist_reward(reward)
+                return VerificationResult(
+                    finding_ref=finding_ref,
+                    defense_actions_applied=[],
+                    re_attack_outcome=evidence.re_attack_outcome,
+                    re_attack_details=(
+                        f"env-verified reward={reward.reward:.1f} "
+                        f"poc_hash={evidence.poc_evidence.output_hash}"
+                    ),
+                )
+        return self._load_verification_result(finding_ref)
 
     def _save_state(self) -> None:
         """Persist current :class:`OrchestratorState` to ``workspace/.vaccine-state.json``."""
