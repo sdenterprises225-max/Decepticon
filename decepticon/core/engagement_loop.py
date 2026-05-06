@@ -82,6 +82,7 @@ class EngagementLoop:
             target=self._config.target,
             phase=EngagementPhase.ATTACK,
         )
+        assert self._state is not None
         if self._state.resumed_at is None and self._state.iteration > 0:
             self._state.resumed_at = datetime.now(timezone.utc)
 
