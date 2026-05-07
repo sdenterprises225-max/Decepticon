@@ -14,6 +14,7 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import ModelFallbackMiddleware
 from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
 
+from decepticon.agents._benchmark_mode import benchmark_skill_sources
 from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
@@ -52,7 +53,10 @@ def create_contract_auditor_agent():
 
     middleware = [
         EngagementContextMiddleware(),
-        SkillsMiddleware(backend=backend, sources=["/skills/contracts/", "/skills/shared/"]),
+        SkillsMiddleware(
+            backend=backend,
+            sources=["/skills/contracts/", "/skills/shared/", *benchmark_skill_sources()],
+        ),
         FilesystemMiddleware(backend=backend),
         SandboxNotificationMiddleware(sandbox=sandbox),
     ]

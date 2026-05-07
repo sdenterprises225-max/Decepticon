@@ -29,6 +29,7 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import ModelFallbackMiddleware
 from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
 
+from decepticon.agents._benchmark_mode import benchmark_skill_sources
 from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
@@ -127,7 +128,10 @@ def create_vulnresearch_agent():
     ]
 
     middleware = [
-        SkillsMiddleware(backend=backend, sources=["/skills/vulnresearch/", "/skills/shared/"]),
+        SkillsMiddleware(
+            backend=backend,
+            sources=["/skills/vulnresearch/", "/skills/shared/", *benchmark_skill_sources()],
+        ),
         FilesystemMiddleware(backend=backend),
         SubAgentMiddleware(backend=backend, subagents=subagents),
         OPPLANMiddleware(),

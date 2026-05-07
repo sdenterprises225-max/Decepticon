@@ -37,8 +37,6 @@ is intentionally NOT a sub-agent here: the launcher routes to its standalone
 assistant when document generation is needed.
 """
 
-import os
-
 from deepagents.middleware.patch_tool_calls import PatchToolCallsMiddleware
 from deepagents.middleware.subagents import CompiledSubAgent, SubAgentMiddleware
 from deepagents.middleware.summarization import create_summarization_middleware
@@ -46,6 +44,7 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import ModelFallbackMiddleware
 from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
 
+from decepticon.agents._benchmark_mode import benchmark_skill_sources
 from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
@@ -202,15 +201,12 @@ def create_decepticon_agent():
     ]
 
     # Assemble middleware stack
-    skill_sources = ["/skills/decepticon/", "/skills/shared/"]
-    if os.environ.get("BENCHMARK_MODE", "").strip().lower() not in {"", "0", "false", "no", "off"}:
-        # Harness task prompt instructs the orchestrator to load
-        # /skills/benchmark/SKILL.md on first turn; expose that path so
-        # SkillsMiddleware's source-allowlist accepts it.
-        skill_sources.append("/skills/benchmark/")
     middleware = [
         EngagementContextMiddleware(),
-        SkillsMiddleware(backend=backend, sources=skill_sources),
+        SkillsMiddleware(
+            backend=backend,
+            sources=["/skills/decepticon/", "/skills/shared/", *benchmark_skill_sources()],
+        ),
         FilesystemMiddleware(backend=backend),
         SubAgentMiddleware(backend=backend, subagents=subagents),
         OPPLANMiddleware(),
