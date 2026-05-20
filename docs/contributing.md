@@ -72,10 +72,18 @@ Minimum Python version: **3.13**
 
 ## Adding an Agent
 
-1. Create `decepticon/agents/{name}.py` with a `create_{name}_agent()` factory function
-2. Follow the middleware stack pattern from an existing agent (e.g., `recon.py`)
+1. Create the agent module. Pick a bundle:
+   - `decepticon/agents/standard/{name}.py` for OSS-blessed agents shipped by default
+   - `decepticon/agents/plugins/{name}.py` to demonstrate the community-plugin shape
+   The file exposes a `create_{name}_agent()` factory.
+2. Follow the middleware stack pattern from an existing agent (e.g., `standard/recon.py`)
 3. Define the agent's skill sources in the `SkillsMiddleware` configuration
-4. Register the agent in the orchestrator's dispatch table
+4. **Subagents only**: add a module-level `SUBAGENT_SPEC = SubAgentSpec(...)`
+   declaring `parent_agents=(...)`, `bundle=...`, and `priority=...`. Register
+   it under `[project.entry-points."decepticon.subagents"]` in `pyproject.toml`.
+   The relevant main agent picks it up automatically via
+   `load_subagents_for_parent(...)`. See `decepticon/plugin_loader.py` for the
+   contract.
 5. Create a skills directory at `skills/{name}/` if the agent needs dedicated skills
 
 ---

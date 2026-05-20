@@ -62,8 +62,9 @@ class SubAgentSpec:
         name: subagent identifier exposed to the LLM through ``task()``.
         description: text shown to the LLM in the ``task`` tool schema.
         factory: zero-arg callable returning the compiled subagent (e.g.
-            ``decepticon.agents.recon.create_recon_agent``). The factory
-            is invoked lazily by the main agent at construction time.
+            ``decepticon.agents.standard.recon.create_recon_agent``). The
+            factory is invoked lazily by the main agent at construction
+            time.
         parent_agents: tuple of main-agent names this subagent should be
             attached to (e.g. ``("decepticon",)`` or
             ``("decepticon", "vulnresearch")``).

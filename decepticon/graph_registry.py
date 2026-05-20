@@ -26,22 +26,24 @@ from decepticon.plugin_loader import load_plugin_agents
 # graph inside OSS, update both. External packages MUST use entry-points
 # in the ``decepticon.agents`` group rather than editing this list.
 BUILTIN_GRAPHS: dict[str, str] = {
-    "decepticon": "./decepticon/agents/decepticon.py:graph",
-    "recon": "./decepticon/agents/recon.py:graph",
-    "soundwave": "./decepticon/agents/soundwave.py:graph",
-    "exploit": "./decepticon/agents/exploit.py:graph",
-    "postexploit": "./decepticon/agents/postexploit.py:graph",
-    "analyst": "./decepticon/agents/analyst.py:graph",
-    "reverser": "./decepticon/agents/reverser.py:graph",
-    "contract_auditor": "./decepticon/agents/contract_auditor.py:graph",
-    "cloud_hunter": "./decepticon/agents/cloud_hunter.py:graph",
-    "ad_operator": "./decepticon/agents/ad_operator.py:graph",
-    "vulnresearch": "./decepticon/agents/vulnresearch.py:graph",
-    "scanner": "./decepticon/agents/scanner.py:graph",
-    "detector": "./decepticon/agents/detector.py:graph",
-    "verifier": "./decepticon/agents/verifier.py:graph",
-    "patcher": "./decepticon/agents/patcher.py:graph",
-    "exploiter": "./decepticon/agents/exploiter.py:graph",
+    # Standard bundle — official OSS main agent + subagents + soundwave.
+    "decepticon": "./decepticon/agents/standard/decepticon.py:graph",
+    "recon": "./decepticon/agents/standard/recon.py:graph",
+    "soundwave": "./decepticon/agents/standard/soundwave.py:graph",
+    "exploit": "./decepticon/agents/standard/exploit.py:graph",
+    "postexploit": "./decepticon/agents/standard/postexploit.py:graph",
+    "analyst": "./decepticon/agents/standard/analyst.py:graph",
+    "reverser": "./decepticon/agents/standard/reverser.py:graph",
+    "contract_auditor": "./decepticon/agents/standard/contract_auditor.py:graph",
+    "cloud_hunter": "./decepticon/agents/standard/cloud_hunter.py:graph",
+    "ad_operator": "./decepticon/agents/standard/ad_operator.py:graph",
+    # Plugins bundle — vulnresearch main agent + 5 subagents (community shape).
+    "vulnresearch": "./decepticon/agents/plugins/vulnresearch.py:graph",
+    "scanner": "./decepticon/agents/plugins/scanner.py:graph",
+    "detector": "./decepticon/agents/plugins/detector.py:graph",
+    "verifier": "./decepticon/agents/plugins/verifier.py:graph",
+    "patcher": "./decepticon/agents/plugins/patcher.py:graph",
+    "exploiter": "./decepticon/agents/plugins/exploiter.py:graph",
 }
 
 
