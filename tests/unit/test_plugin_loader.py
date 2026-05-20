@@ -81,11 +81,11 @@ def test_broken_load_is_logged_and_skipped(caplog):
     good = MagicMock(invoke=MagicMock())
     eps = [BrokenEP(), _FakeEntryPoint("good", "good:thing", good)]
     with patch.object(plugin_loader, "entry_points", return_value=eps):
-        with caplog.at_level("ERROR", logger="decepticon.plugin_loader"):
+        with caplog.at_level("ERROR"):
             result = plugin_loader.load_plugin_tools()
 
     assert result == [good]
-    assert any("broken" in record.getMessage() for record in caplog.records)
+    assert "broken" in caplog.text
 
 
 def test_broken_factory_call_is_logged_and_skipped(caplog):
@@ -100,11 +100,11 @@ def test_broken_factory_call_is_logged_and_skipped(caplog):
         _FakeEntryPoint("good", "pkg:t", good_obj),
     ]
     with patch.object(plugin_loader, "entry_points", return_value=eps):
-        with caplog.at_level("ERROR", logger="decepticon.plugin_loader"):
+        with caplog.at_level("ERROR"):
             result = plugin_loader.load_plugin_tools()
 
     assert result == [good_obj]
-    assert any("broken-factory" in record.getMessage() for record in caplog.records)
+    assert "broken-factory" in caplog.text
 
 
 def test_load_plugin_agents_normalizes_to_module_graph():
@@ -225,11 +225,11 @@ def test_load_subagents_broken_plugin_is_logged_and_skipped(caplog):
     good = _spec("good")
     eps = [BrokenEP(), _FakeEntryPoint("good", "pkg.good:SUBAGENT_SPEC", good)]
     with patch.object(plugin_loader, "entry_points", return_value=eps):
-        with caplog.at_level("ERROR", logger="decepticon.plugin_loader"):
+        with caplog.at_level("ERROR"):
             result = plugin_loader.load_subagents_for_parent("decepticon")
 
     assert [s.name for s in result] == ["good"]
-    assert any("broken" in record.getMessage() for record in caplog.records)
+    assert "broken" in caplog.text
 
 
 def test_load_subagents_no_match_returns_empty():
@@ -361,10 +361,10 @@ def test_enabled_bundles_broken_config_falls_through(monkeypatch, tmp_path, capl
         encoding="utf-8",
     )
     monkeypatch.chdir(tmp_path)
-    with caplog.at_level("ERROR", logger="decepticon.plugin_loader"):
+    with caplog.at_level("ERROR"):
         result = plugin_loader._enabled_bundles()
     assert result == frozenset({"standard"})
-    assert any(".decepticon.toml" in r.getMessage() for r in caplog.records)
+    assert ".decepticon.toml" in caplog.text
 
 
 def test_is_bundle_enabled_semantics(monkeypatch, tmp_path):
