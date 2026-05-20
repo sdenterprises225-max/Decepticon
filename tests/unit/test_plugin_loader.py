@@ -137,3 +137,129 @@ def test_none_result_from_factory_is_dropped():
     ep = _FakeEntryPoint("noop", "pkg:f", factory)
     with patch.object(plugin_loader, "entry_points", return_value=[ep]):
         assert plugin_loader.load_plugin_tools() == []
+
+
+# ---------------------------------------------------------------------------
+# Subagent discovery — load_subagents_for_parent
+# ---------------------------------------------------------------------------
+
+
+def _spec(name: str, parents=("decepticon",), priority: int = 100, bundle: str | None = None):
+    """Construct a SubAgentSpec for tests with a stub factory."""
+    return plugin_loader.SubAgentSpec(
+        name=name,
+        description=f"{name} description",
+        factory=lambda: f"{name}-agent",
+        parent_agents=tuple(parents),
+        bundle=bundle,
+        priority=priority,
+    )
+
+
+def test_load_subagents_filters_by_parent():
+    """Only specs whose parent_agents includes the requested parent are returned."""
+    specs = [
+        _spec("recon", parents=("decepticon",)),
+        _spec("scanner", parents=("vulnresearch",)),
+        _spec("shared-tool", parents=("decepticon", "vulnresearch")),
+    ]
+    eps = [_FakeEntryPoint(s.name, f"pkg.{s.name}:SUBAGENT_SPEC", s) for s in specs]
+    with patch.object(plugin_loader, "entry_points", return_value=eps):
+        decepticon_specs = plugin_loader.load_subagents_for_parent("decepticon")
+        vulnresearch_specs = plugin_loader.load_subagents_for_parent("vulnresearch")
+
+    assert {s.name for s in decepticon_specs} == {"recon", "shared-tool"}
+    assert {s.name for s in vulnresearch_specs} == {"scanner", "shared-tool"}
+
+
+def test_load_subagents_sorted_by_priority_then_name():
+    """Returned specs follow (priority asc, name asc) order."""
+    specs = [
+        _spec("b-late", priority=50),
+        _spec("a-early", priority=10),
+        _spec("c-also-early", priority=10),
+    ]
+    eps = [_FakeEntryPoint(s.name, f"pkg.{s.name}:SUBAGENT_SPEC", s) for s in specs]
+    with patch.object(plugin_loader, "entry_points", return_value=eps):
+        result = plugin_loader.load_subagents_for_parent("decepticon")
+
+    assert [s.name for s in result] == ["a-early", "c-also-early", "b-late"]
+
+
+def test_load_subagents_supports_list_export():
+    """Entry-points exporting a list of specs are flattened."""
+    bundle = [
+        _spec("alpha", priority=10),
+        _spec("beta", priority=20),
+    ]
+    ep = _FakeEntryPoint("bundle", "pkg:BUNDLE", bundle)
+    with patch.object(plugin_loader, "entry_points", return_value=[ep]):
+        result = plugin_loader.load_subagents_for_parent("decepticon")
+
+    assert [s.name for s in result] == ["alpha", "beta"]
+
+
+def test_load_subagents_supports_factory_callable():
+    """A callable that returns a SubAgentSpec is invoked."""
+
+    def make_spec():
+        return _spec("dynamic", priority=5)
+
+    ep = _FakeEntryPoint("dyn", "pkg:make_spec", make_spec)
+    with patch.object(plugin_loader, "entry_points", return_value=[ep]):
+        result = plugin_loader.load_subagents_for_parent("decepticon")
+
+    assert [s.name for s in result] == ["dynamic"]
+
+
+def test_load_subagents_broken_plugin_is_logged_and_skipped(caplog):
+    """A broken subagent plugin is skipped; siblings still load."""
+
+    class BrokenEP:
+        name = "broken"
+        value = "broken:thing"
+
+        def load(self):
+            raise RuntimeError("boom")
+
+    good = _spec("good")
+    eps = [BrokenEP(), _FakeEntryPoint("good", "pkg.good:SUBAGENT_SPEC", good)]
+    with patch.object(plugin_loader, "entry_points", return_value=eps):
+        with caplog.at_level("ERROR", logger="decepticon.plugin_loader"):
+            result = plugin_loader.load_subagents_for_parent("decepticon")
+
+    assert [s.name for s in result] == ["good"]
+    assert any("broken" in record.getMessage() for record in caplog.records)
+
+
+def test_load_subagents_no_match_returns_empty():
+    """Requesting a parent with no matching specs yields an empty list."""
+    eps = [_FakeEntryPoint("recon", "pkg.recon:SUBAGENT_SPEC", _spec("recon"))]
+    with patch.object(plugin_loader, "entry_points", return_value=eps):
+        result = plugin_loader.load_subagents_for_parent("nonexistent")
+
+    assert result == []
+
+
+def test_load_subagents_factory_is_lazy():
+    """SubAgentSpec.factory is NOT invoked during discovery — caller decides."""
+    invocations = {"count": 0}
+
+    def factory():
+        invocations["count"] += 1
+        return "agent-instance"
+
+    spec = plugin_loader.SubAgentSpec(
+        name="lazy",
+        description="...",
+        factory=factory,
+        parent_agents=("decepticon",),
+    )
+    ep = _FakeEntryPoint("lazy", "pkg:SUBAGENT_SPEC", spec)
+    with patch.object(plugin_loader, "entry_points", return_value=[ep]):
+        result = plugin_loader.load_subagents_for_parent("decepticon")
+
+    assert invocations["count"] == 0  # factory not yet called
+    # caller invokes when ready
+    assert result[0].factory() == "agent-instance"
+    assert invocations["count"] == 1

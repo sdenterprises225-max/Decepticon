@@ -35,7 +35,11 @@ from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.core.subagent_streaming import StreamingRunnable
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import (
+    load_plugin_middleware,
+    load_plugin_tools,
+    load_subagents_for_parent,
+)
 from decepticon.middleware import FilesystemMiddleware, OPPLANMiddleware
 from decepticon.middleware.skills import SkillsMiddleware
 from decepticon.tools.research.tools import kg_query, kg_stats
@@ -66,66 +70,20 @@ def create_vulnresearch_agent():
 
     backend = sandbox
 
-    # Import factories lazily so a broken sub-agent definition surfaces
-    # at instantiation time, not at module-import time (matching
-    # decepticon.py's pattern).
-    from decepticon.agents.detector import create_detector_agent
-    from decepticon.agents.exploiter import create_exploiter_agent
-    from decepticon.agents.patcher import create_patcher_agent
-    from decepticon.agents.scanner import create_scanner_agent
-    from decepticon.agents.verifier import create_verifier_agent
-
+    # Build sub-agents via plugin-loader discovery. Each subagent
+    # declares itself as a ``SUBAGENT_SPEC`` module constant registered
+    # under the ``decepticon.subagents`` entry-point group; this main
+    # agent picks up every spec whose ``parent_agents`` includes
+    # ``"vulnresearch"``. Community or SaaS plugin packages can extend
+    # this roster without modifying OSS — see
+    # ``decepticon/plugin_loader.py`` for the loader contract.
     subagents = [
         CompiledSubAgent(
-            name="scanner",
-            description=(
-                "Stage 1 — broad-spectrum scanner. Walks very large codebases "
-                "in parallel shards and emits CANDIDATE nodes with heuristic "
-                "suspicion scores. Use first on any new target. Cheap, fast, "
-                "no vulnerability reasoning."
-            ),
-            runnable=StreamingRunnable(create_scanner_agent(), "scanner"),
-        ),
-        CompiledSubAgent(
-            name="detector",
-            description=(
-                "Stage 2 — vulnerability detector. Reads source around each "
-                "CANDIDATE and promotes real bugs to VULNERABILITY + "
-                "HYPOTHESIS nodes, or rejects them as false positives. "
-                "Read-only (no bash)."
-            ),
-            runnable=StreamingRunnable(create_detector_agent(), "detector"),
-        ),
-        CompiledSubAgent(
-            name="verifier",
-            description=(
-                "Stage 3 — triage and verification. Builds minimal PoCs for "
-                "VULNERABILITY nodes, runs them inside the DockerSandbox "
-                "with Zero-False-Positive controls, and promotes confirmed "
-                "bugs to FINDING nodes with CVSS vectors."
-            ),
-            runnable=StreamingRunnable(create_verifier_agent(), "verifier"),
-        ),
-        CompiledSubAgent(
-            name="patcher",
-            description=(
-                "Stage 4 — patch generation. Writes minimal diffs for "
-                "validated findings, applies them, and proves the fix via "
-                "patch_verify (re-runs the PoC, expects failure). Opus "
-                "tier, iterative."
-            ),
-            runnable=StreamingRunnable(create_patcher_agent(), "patcher"),
-        ),
-        CompiledSubAgent(
-            name="exploiter",
-            description=(
-                "Stage 5 (optional) — exploit construction. Chains "
-                "validated primitives into weaponized attack paths that "
-                "reach a CROWN_JEWEL node. Uses plan_attack_chains and "
-                "can hand off to the reverser for binary work."
-            ),
-            runnable=StreamingRunnable(create_exploiter_agent(), "exploiter"),
-        ),
+            name=spec.name,
+            description=spec.description,
+            runnable=StreamingRunnable(spec.factory(), spec.name),
+        )
+        for spec in load_subagents_for_parent("vulnresearch")
     ]
 
     middleware = [

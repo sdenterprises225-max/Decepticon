@@ -28,7 +28,7 @@ from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import SubAgentSpec, load_plugin_middleware, load_plugin_tools
 from decepticon.middleware import (
     EngagementContextMiddleware,
     FilesystemMiddleware,
@@ -108,3 +108,22 @@ def create_analyst_agent():
 
 # Module-level graph for LangGraph Platform (langgraph serve)
 graph = create_analyst_agent()
+
+
+SUBAGENT_SPEC = SubAgentSpec(
+    name="analyst",
+    description=(
+        "Vulnerability research agent — the high-value discovery lane. "
+        "Use for: source code review, static analysis (semgrep/bandit/gitleaks), "
+        "dependency CVE sweeps, silent-patch diff hunting, fuzzing, taint "
+        "analysis for SSRF/SQLi/IDOR/deserialization/prototype-pollution/"
+        "command-injection/prompt-injection, and multi-hop exploit chain "
+        "construction. Writes all observations into the KnowledgeGraph "
+        "backend (default /workspace/kg.json, optional Neo4j) so "
+        "findings survive across iterations."
+    ),
+    factory=create_analyst_agent,
+    parent_agents=("decepticon",),
+    bundle="standard",
+    priority=30,
+)

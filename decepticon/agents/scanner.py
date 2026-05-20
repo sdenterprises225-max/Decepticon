@@ -25,7 +25,7 @@ from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import SubAgentSpec, load_plugin_middleware, load_plugin_tools
 from decepticon.middleware import (
     EngagementContextMiddleware,
     FilesystemMiddleware,
@@ -105,3 +105,18 @@ def create_scanner_agent():
 
 # Module-level graph for LangGraph Platform (langgraph serve)
 graph = create_scanner_agent()
+
+
+SUBAGENT_SPEC = SubAgentSpec(
+    name="scanner",
+    description=(
+        "Stage 1 — broad-spectrum scanner. Walks very large codebases "
+        "in parallel shards and emits CANDIDATE nodes with heuristic "
+        "suspicion scores. Use first on any new target. Cheap, fast, "
+        "no vulnerability reasoning."
+    ),
+    factory=create_scanner_agent,
+    parent_agents=("vulnresearch",),
+    bundle="plugins",
+    priority=10,
+)

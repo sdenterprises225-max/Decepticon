@@ -24,7 +24,7 @@ from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import SubAgentSpec, load_plugin_middleware, load_plugin_tools
 from decepticon.middleware import (
     EngagementContextMiddleware,
     FilesystemMiddleware,
@@ -102,3 +102,19 @@ def create_reverser_agent():
 
 
 graph = create_reverser_agent()
+
+
+SUBAGENT_SPEC = SubAgentSpec(
+    name="reverser",
+    description=(
+        "Binary reversing specialist. Use for ELF/PE/Mach-O/firmware triage, "
+        "packer detection, classified string extraction, symbol risk reports, "
+        "ROP gadget inventories, and Ghidra/radare2 recon script generation. "
+        "Ideal for thick clients, IoT firmware, game cheats, malware triage, "
+        "and exploit dev hand-offs."
+    ),
+    factory=create_reverser_agent,
+    parent_agents=("decepticon",),
+    bundle="standard",
+    priority=40,
+)

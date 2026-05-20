@@ -13,7 +13,7 @@ from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import SubAgentSpec, load_plugin_middleware, load_plugin_tools
 from decepticon.middleware import (
     EngagementContextMiddleware,
     FilesystemMiddleware,
@@ -92,3 +92,18 @@ def create_cloud_hunter_agent():
 
 
 graph = create_cloud_hunter_agent()
+
+
+SUBAGENT_SPEC = SubAgentSpec(
+    name="cloud_hunter",
+    description=(
+        "AWS / Azure / GCP / Kubernetes exploitation specialist. Use for "
+        "IAM policy privesc, S3 bucket takeover, Kubernetes RBAC / hostPath "
+        "escapes, Terraform state secret extraction, and cloud metadata "
+        "pivoting after an SSRF is confirmed by recon or analyst."
+    ),
+    factory=create_cloud_hunter_agent,
+    parent_agents=("decepticon",),
+    bundle="standard",
+    priority=60,
+)

@@ -80,9 +80,9 @@ dev = [
 decepticon-kg-health = "decepticon.tools.research.health:main"
 
 # Plugin entry-point groups consumed by ``decepticon.plugin_loader``.
-# External packages (e.g. SaaS plugin packages) declare their contributions
-# under these groups; OSS itself currently ships no entries. See
-# ``decepticon/plugin_loader.py`` for the contract.
+# External packages (SaaS or community plugins) declare their
+# contributions under these groups. See ``decepticon/plugin_loader.py``
+# for the loader contract (shapes, factory kwargs, error isolation).
 #
 #   [project.entry-points."decepticon.tools"]
 #   my-tools = "my_pkg.tools:get_tools"
@@ -93,8 +93,36 @@ decepticon-kg-health = "decepticon.tools.research.health:main"
 #   [project.entry-points."decepticon.agents"]
 #   my-agent = "my_pkg.agents.my_agent"
 #
+#   [project.entry-points."decepticon.subagents"]
+#   my-subagent = "my_pkg.agents.my_subagent:SUBAGENT_SPEC"
+#
 #   [project.entry-points."decepticon.callbacks"]
 #   my-cb = "my_pkg.callbacks:get_callbacks"
+
+# OSS-shipped subagents — registered here so the plugin loader picks
+# them up uniformly with external plugins. Each entry resolves to a
+# ``SubAgentSpec`` module constant declaring (name, description,
+# factory, parent_agents, bundle, priority). The main agents iterate
+# ``load_subagents_for_parent(<their-name>)`` at construction time;
+# adding a new subagent — OSS or plugin — is a pure entry-point
+# registration with no main-agent edits required.
+
+[project.entry-points."decepticon.subagents"]
+# Standard bundle — attached to the ``decepticon`` main agent.
+recon = "decepticon.agents.recon:SUBAGENT_SPEC"
+exploit = "decepticon.agents.exploit:SUBAGENT_SPEC"
+analyst = "decepticon.agents.analyst:SUBAGENT_SPEC"
+reverser = "decepticon.agents.reverser:SUBAGENT_SPEC"
+contract_auditor = "decepticon.agents.contract_auditor:SUBAGENT_SPEC"
+cloud_hunter = "decepticon.agents.cloud_hunter:SUBAGENT_SPEC"
+ad_operator = "decepticon.agents.ad_operator:SUBAGENT_SPEC"
+postexploit = "decepticon.agents.postexploit:SUBAGENT_SPEC"
+# Plugins bundle — vulnresearch family, attached to the ``vulnresearch`` main agent.
+scanner = "decepticon.agents.scanner:SUBAGENT_SPEC"
+detector = "decepticon.agents.detector:SUBAGENT_SPEC"
+verifier = "decepticon.agents.verifier:SUBAGENT_SPEC"
+patcher = "decepticon.agents.patcher:SUBAGENT_SPEC"
+exploiter = "decepticon.agents.exploiter:SUBAGENT_SPEC"
 
 [project.urls]
 Homepage = "https://github.com/PurpleAILAB/Decepticon"

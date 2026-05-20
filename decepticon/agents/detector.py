@@ -31,7 +31,7 @@ from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import SubAgentSpec, load_plugin_middleware, load_plugin_tools
 from decepticon.middleware import FilesystemMiddleware
 from decepticon.middleware.skills import SkillsMiddleware
 from decepticon.tools.research.tools import (
@@ -114,3 +114,18 @@ def create_detector_agent():
 
 
 graph = create_detector_agent()
+
+
+SUBAGENT_SPEC = SubAgentSpec(
+    name="detector",
+    description=(
+        "Stage 2 — vulnerability detector. Reads source around each "
+        "CANDIDATE and promotes real bugs to VULNERABILITY + "
+        "HYPOTHESIS nodes, or rejects them as false positives. "
+        "Read-only (no bash)."
+    ),
+    factory=create_detector_agent,
+    parent_agents=("vulnresearch",),
+    bundle="plugins",
+    priority=20,
+)

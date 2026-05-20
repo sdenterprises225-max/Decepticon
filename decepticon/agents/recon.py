@@ -26,7 +26,7 @@ from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import SubAgentSpec, load_plugin_middleware, load_plugin_tools
 from decepticon.middleware import (
     EngagementContextMiddleware,
     FilesystemMiddleware,
@@ -140,3 +140,18 @@ def create_recon_agent():
 
 # Module-level graph for LangGraph Platform (langgraph serve)
 graph = create_recon_agent()
+
+
+SUBAGENT_SPEC = SubAgentSpec(
+    name="recon",
+    description=(
+        "Reconnaissance agent. Passive/active recon, OSINT, web/cloud recon. "
+        "Use for: subdomain enumeration, port scanning, service detection, "
+        "vulnerability scanning, OSINT gathering. "
+        "Saves results under the active engagement workspace's recon/ directory."
+    ),
+    factory=create_recon_agent,
+    parent_agents=("decepticon",),
+    bundle="standard",
+    priority=10,
+)

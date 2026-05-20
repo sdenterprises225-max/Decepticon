@@ -25,7 +25,7 @@ from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import SubAgentSpec, load_plugin_middleware, load_plugin_tools
 from decepticon.middleware import (
     EngagementContextMiddleware,
     FilesystemMiddleware,
@@ -102,3 +102,18 @@ def create_patcher_agent():
 
 
 graph = create_patcher_agent()
+
+
+SUBAGENT_SPEC = SubAgentSpec(
+    name="patcher",
+    description=(
+        "Stage 4 — patch generation. Writes minimal diffs for "
+        "validated findings, applies them, and proves the fix via "
+        "patch_verify (re-runs the PoC, expects failure). Opus "
+        "tier, iterative."
+    ),
+    factory=create_patcher_agent,
+    parent_agents=("vulnresearch",),
+    bundle="plugins",
+    priority=40,
+)

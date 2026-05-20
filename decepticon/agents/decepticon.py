@@ -50,7 +50,11 @@ from decepticon.backends import build_sandbox_backend
 from decepticon.core.config import load_config
 from decepticon.core.subagent_streaming import StreamingRunnable
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import (
+    load_plugin_middleware,
+    load_plugin_tools,
+    load_subagents_for_parent,
+)
 from decepticon.middleware import (
     EngagementContextMiddleware,
     FilesystemMiddleware,
@@ -90,115 +94,34 @@ def create_decepticon_agent():
     # langgraph process never reads from the host filesystem.
     backend = sandbox
 
-    # Build sub-agents from existing agent factories
-    from decepticon.agents.ad_operator import create_ad_operator_agent
-    from decepticon.agents.analyst import create_analyst_agent
-    from decepticon.agents.cloud_hunter import create_cloud_hunter_agent
-    from decepticon.agents.contract_auditor import create_contract_auditor_agent
-    from decepticon.agents.exploit import create_exploit_agent
-    from decepticon.agents.postexploit import create_postexploit_agent
-    from decepticon.agents.recon import create_recon_agent
-    from decepticon.agents.reverser import create_reverser_agent
-
-    # Wrap each sub-agent with StreamingRunnable so their tool calls, results,
-    # and AI messages stream through both Python CLI (UIRenderer) and
-    # LangGraph Platform HTTP API (get_stream_writer → custom events).
+    # Build sub-agents via plugin-loader discovery. Each subagent declares
+    # itself as a ``SUBAGENT_SPEC`` module constant registered under the
+    # ``decepticon.subagents`` entry-point group; this main agent picks
+    # up every spec whose ``parent_agents`` includes ``"decepticon"``.
+    # SaaS or community plugin packages can extend this roster without
+    # modifying OSS — see ``decepticon/plugin_loader.py`` for the loader
+    # contract and ``pyproject.toml`` for the registered specs.
     #
-    # Soundwave is intentionally NOT a sub-agent here: it is registered at the
-    # orchestrator level (create_orchestrator) and routed to whenever
-    # engagement docs are missing. Soundwave is designed standalone (no
-    # SubAgentMiddleware, no bash tool — see soundwave.py module docstring),
-    # so document regeneration goes through the orchestrator routing, not
-    # decepticon delegation. Document edits while docs already exist are
-    # handled by decepticon's FilesystemMiddleware directly.
+    # Each discovered subagent is wrapped in StreamingRunnable so its
+    # tool calls, results, and AI messages stream through both Python CLI
+    # (UIRenderer) and LangGraph Platform HTTP API (get_stream_writer →
+    # custom events).
+    #
+    # Soundwave is intentionally NOT a sub-agent here: it is registered
+    # at the orchestrator level (create_orchestrator) and routed to
+    # whenever engagement docs are missing. Soundwave is designed
+    # standalone (no SubAgentMiddleware, no bash tool — see
+    # soundwave.py module docstring), so document regeneration goes
+    # through the orchestrator routing, not decepticon delegation.
+    # Document edits while docs already exist are handled by
+    # decepticon's FilesystemMiddleware directly.
     subagents = [
         CompiledSubAgent(
-            name="recon",
-            description=(
-                "Reconnaissance agent. Passive/active recon, OSINT, web/cloud recon. "
-                "Use for: subdomain enumeration, port scanning, service detection, "
-                "vulnerability scanning, OSINT gathering. "
-                "Saves results under the active engagement workspace's recon/ directory."
-            ),
-            runnable=StreamingRunnable(create_recon_agent(), "recon"),
-        ),
-        CompiledSubAgent(
-            name="exploit",
-            description=(
-                "Exploitation agent. Initial access via web/AD attacks. "
-                "Use for: SQLi, SSTI, Kerberoasting, ADCS abuse, credential attacks. "
-                "Use after recon identifies attack surface. "
-                "Saves results under the active engagement workspace's exploit/ directory."
-            ),
-            runnable=StreamingRunnable(create_exploit_agent(), "exploit"),
-        ),
-        CompiledSubAgent(
-            name="analyst",
-            description=(
-                "Vulnerability research agent — the high-value discovery lane. "
-                "Use for: source code review, static analysis (semgrep/bandit/gitleaks), "
-                "dependency CVE sweeps, silent-patch diff hunting, fuzzing, taint "
-                "analysis for SSRF/SQLi/IDOR/deserialization/prototype-pollution/"
-                "command-injection/prompt-injection, and multi-hop exploit chain "
-                "construction. Writes all observations into the KnowledgeGraph "
-                "backend (default /workspace/kg.json, optional Neo4j) so "
-                "findings survive across iterations."
-            ),
-            runnable=StreamingRunnable(create_analyst_agent(), "analyst"),
-        ),
-        CompiledSubAgent(
-            name="reverser",
-            description=(
-                "Binary reversing specialist. Use for ELF/PE/Mach-O/firmware triage, "
-                "packer detection, classified string extraction, symbol risk reports, "
-                "ROP gadget inventories, and Ghidra/radare2 recon script generation. "
-                "Ideal for thick clients, IoT firmware, game cheats, malware triage, "
-                "and exploit dev hand-offs."
-            ),
-            runnable=StreamingRunnable(create_reverser_agent(), "reverser"),
-        ),
-        CompiledSubAgent(
-            name="contract_auditor",
-            description=(
-                "Solidity / EVM smart contract audit specialist. Use for DeFi / "
-                "smart-contract engagements: reentrancy, oracle manipulation, flash "
-                "loan abuse, access control gaps, upgradeable proxies, signature "
-                "replay. Runs Slither ingestion, solidity pattern scanner, and "
-                "Foundry PoC test harness generation."
-            ),
-            runnable=StreamingRunnable(create_contract_auditor_agent(), "contract_auditor"),
-        ),
-        CompiledSubAgent(
-            name="cloud_hunter",
-            description=(
-                "AWS / Azure / GCP / Kubernetes exploitation specialist. Use for "
-                "IAM policy privesc, S3 bucket takeover, Kubernetes RBAC / hostPath "
-                "escapes, Terraform state secret extraction, and cloud metadata "
-                "pivoting after an SSRF is confirmed by recon or analyst."
-            ),
-            runnable=StreamingRunnable(create_cloud_hunter_agent(), "cloud_hunter"),
-        ),
-        CompiledSubAgent(
-            name="ad_operator",
-            description=(
-                "Active Directory / Windows attack specialist. Use after initial "
-                "internal foothold: BloodHound ingestion, Kerberoast / AS-REP roast, "
-                "ADCS ESC1-ESC15 scanning, DCSync candidate detection, and multi-hop "
-                "AD attack path planning. Complements postexploit for Windows "
-                "engagements."
-            ),
-            runnable=StreamingRunnable(create_ad_operator_agent(), "ad_operator"),
-        ),
-        CompiledSubAgent(
-            name="postexploit",
-            description=(
-                "Post-exploitation agent. Credential access, privilege escalation, "
-                "lateral movement, C2 management. "
-                "Use after initial foothold is established. "
-                "Saves results under the active engagement workspace's post-exploit/ directory."
-            ),
-            runnable=StreamingRunnable(create_postexploit_agent(), "postexploit"),
-        ),
+            name=spec.name,
+            description=spec.description,
+            runnable=StreamingRunnable(spec.factory(), spec.name),
+        )
+        for spec in load_subagents_for_parent("decepticon")
     ]
 
     # Assemble middleware stack. ModelOverrideMiddleware sits ahead of

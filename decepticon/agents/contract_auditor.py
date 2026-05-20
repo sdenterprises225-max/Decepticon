@@ -19,7 +19,7 @@ from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import SubAgentSpec, load_plugin_middleware, load_plugin_tools
 from decepticon.middleware import (
     EngagementContextMiddleware,
     FilesystemMiddleware,
@@ -100,3 +100,19 @@ def create_contract_auditor_agent():
 
 
 graph = create_contract_auditor_agent()
+
+
+SUBAGENT_SPEC = SubAgentSpec(
+    name="contract_auditor",
+    description=(
+        "Solidity / EVM smart contract audit specialist. Use for DeFi / "
+        "smart-contract engagements: reentrancy, oracle manipulation, flash "
+        "loan abuse, access control gaps, upgradeable proxies, signature "
+        "replay. Runs Slither ingestion, solidity pattern scanner, and "
+        "Foundry PoC test harness generation."
+    ),
+    factory=create_contract_auditor_agent,
+    parent_agents=("decepticon",),
+    bundle="standard",
+    priority=50,
+)

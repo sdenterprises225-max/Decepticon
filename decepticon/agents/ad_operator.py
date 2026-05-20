@@ -13,7 +13,7 @@ from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import SubAgentSpec, load_plugin_middleware, load_plugin_tools
 from decepticon.middleware import (
     EngagementContextMiddleware,
     FilesystemMiddleware,
@@ -95,3 +95,19 @@ def create_ad_operator_agent():
 
 
 graph = create_ad_operator_agent()
+
+
+SUBAGENT_SPEC = SubAgentSpec(
+    name="ad_operator",
+    description=(
+        "Active Directory / Windows attack specialist. Use after initial "
+        "internal foothold: BloodHound ingestion, Kerberoast / AS-REP roast, "
+        "ADCS ESC1-ESC15 scanning, DCSync candidate detection, and multi-hop "
+        "AD attack path planning. Complements postexploit for Windows "
+        "engagements."
+    ),
+    factory=create_ad_operator_agent,
+    parent_agents=("decepticon",),
+    bundle="standard",
+    priority=70,
+)

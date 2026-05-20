@@ -30,7 +30,7 @@ from decepticon.agents.prompts import load_prompt
 from decepticon.backends import DockerSandbox
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
-from decepticon.plugin_loader import load_plugin_middleware, load_plugin_tools
+from decepticon.plugin_loader import SubAgentSpec, load_plugin_middleware, load_plugin_tools
 from decepticon.middleware import (
     EngagementContextMiddleware,
     FilesystemMiddleware,
@@ -110,3 +110,18 @@ def create_verifier_agent():
 
 
 graph = create_verifier_agent()
+
+
+SUBAGENT_SPEC = SubAgentSpec(
+    name="verifier",
+    description=(
+        "Stage 3 — triage and verification. Builds minimal PoCs for "
+        "VULNERABILITY nodes, runs them inside the DockerSandbox "
+        "with Zero-False-Positive controls, and promotes confirmed "
+        "bugs to FINDING nodes with CVSS vectors."
+    ),
+    factory=create_verifier_agent,
+    parent_agents=("vulnresearch",),
+    bundle="plugins",
+    priority=30,
+)
