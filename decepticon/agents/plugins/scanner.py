@@ -22,7 +22,7 @@ from langchain.agents.middleware import ModelFallbackMiddleware
 from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
 
 from decepticon.agents.prompts import load_prompt
-from decepticon.backends import DockerSandbox
+from decepticon.backends import build_sandbox_backend, make_agent_backend
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
 from decepticon.plugin_loader import SubAgentSpec, load_plugin_callbacks, load_plugin_middleware, load_plugin_tools
@@ -57,14 +57,14 @@ def create_scanner_agent():
     llm = factory.get_model("scanner")
     fallback_models = factory.get_fallback_models("scanner")
 
-    sandbox = DockerSandbox(
+    sandbox = build_sandbox_backend(
         container_name=config.docker.sandbox_container_name,
     )
     set_sandbox(sandbox)
 
     system_prompt = load_prompt("scanner", shared=["bash"])
 
-    backend = sandbox
+    backend = make_agent_backend(sandbox)
 
     middleware = [
         EngagementContextMiddleware(),

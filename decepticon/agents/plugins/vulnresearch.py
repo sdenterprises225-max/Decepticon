@@ -31,7 +31,7 @@ from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
 
 from decepticon.agents._benchmark_mode import benchmark_skill_sources
 from decepticon.agents.prompts import load_prompt
-from decepticon.backends import DockerSandbox
+from decepticon.backends import build_sandbox_backend, make_agent_backend
 from decepticon.core.config import load_config
 from decepticon.core.subagent_streaming import StreamingRunnable
 from decepticon.llm import LLMFactory
@@ -61,7 +61,7 @@ def create_vulnresearch_agent():
     llm = factory.get_model("vulnresearch")
     fallback_models = factory.get_fallback_models("vulnresearch")
 
-    sandbox = DockerSandbox(
+    sandbox = build_sandbox_backend(
         container_name=config.docker.sandbox_container_name,
     )
     # NOTE: do NOT call set_sandbox() here — the orchestrator must not
@@ -70,7 +70,7 @@ def create_vulnresearch_agent():
 
     system_prompt = load_prompt("vulnresearch", shared=[])
 
-    backend = sandbox
+    backend = make_agent_backend(sandbox)
 
     # Build sub-agents via plugin-loader discovery. Each subagent
     # declares itself as a ``SUBAGENT_SPEC`` module constant registered

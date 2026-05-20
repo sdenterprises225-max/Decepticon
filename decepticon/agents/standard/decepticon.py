@@ -46,7 +46,7 @@ from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
 
 from decepticon.agents._benchmark_mode import benchmark_skill_sources
 from decepticon.agents.prompts import load_prompt
-from decepticon.backends import build_sandbox_backend
+from decepticon.backends import build_sandbox_backend, make_agent_backend
 from decepticon.core.config import load_config
 from decepticon.core.subagent_streaming import StreamingRunnable
 from decepticon.llm import LLMFactory
@@ -94,7 +94,7 @@ def create_decepticon_agent():
     # are bind-mounted into the sandbox container at /skills/, see
     # docker-compose.yml). All file I/O goes through the sandbox so the
     # langgraph process never reads from the host filesystem.
-    backend = sandbox
+    backend = make_agent_backend(sandbox)
 
     # Build sub-agents via plugin-loader discovery. Each subagent declares
     # itself as a ``SUBAGENT_SPEC`` module constant registered under the

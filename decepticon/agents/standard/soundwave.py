@@ -29,7 +29,7 @@ from langchain.agents.middleware import ModelFallbackMiddleware
 from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
 
 from decepticon.agents.prompts import load_prompt
-from decepticon.backends import build_sandbox_backend
+from decepticon.backends import build_sandbox_backend, make_agent_backend
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
 from decepticon.plugin_loader import load_plugin_callbacks, load_plugin_middleware, load_plugin_tools
@@ -61,7 +61,7 @@ def create_soundwave_agent():
 
     system_prompt = load_prompt("soundwave")
     # Skills + workspace both live inside the sandbox (skills bind-mounted at /skills/).
-    backend = sandbox
+    backend = make_agent_backend(sandbox)
 
     # Assemble middleware stack
     middleware = [

@@ -10,7 +10,7 @@ from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
 
 from decepticon.agents._benchmark_mode import benchmark_skill_sources
 from decepticon.agents.prompts import load_prompt
-from decepticon.backends import DockerSandbox
+from decepticon.backends import build_sandbox_backend, make_agent_backend
 from decepticon.core.config import load_config
 from decepticon.llm import LLMFactory
 from decepticon.plugin_loader import SubAgentSpec, load_plugin_callbacks, load_plugin_middleware, load_plugin_tools
@@ -41,11 +41,11 @@ def create_ad_operator_agent():
     llm = factory.get_model("ad_operator")
     fallback_models = factory.get_fallback_models("ad_operator")
 
-    sandbox = DockerSandbox(container_name=config.docker.sandbox_container_name)
+    sandbox = build_sandbox_backend(container_name=config.docker.sandbox_container_name)
     set_sandbox(sandbox)
 
     system_prompt = load_prompt("ad_operator", shared=["bash"])
-    backend = sandbox
+    backend = make_agent_backend(sandbox)
 
     middleware = [
         EngagementContextMiddleware(),
