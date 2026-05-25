@@ -19,8 +19,10 @@ ordering AuthMethods in the fallback chain.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+from collections.abc import Awaitable
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -43,6 +45,52 @@ from decepticon_core.types.llm import (
 from decepticon_core.utils.logging import get_logger
 
 log = get_logger("llm.factory")
+
+
+DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 600
+LLM_TIMEOUT_ENV = "DECEPTICON_LLM_TIMEOUT_SECONDS"
+
+
+class LLMTimeoutError(RuntimeError):
+    """Raised when an async LLM request exceeds the configured per-call timeout.
+
+    Distinct from generic ``asyncio.TimeoutError`` so middleware and retry
+    layers can identify request-timeout failures without catching every
+    cancellation in the loop. The timeout is whole-coroutine, not transport-
+    level (``ProxyConfig.timeout`` already covers transport).
+    """
+
+
+def _resolve_llm_timeout_seconds() -> float:
+    """Resolve the per-call LLM request timeout.
+
+    Precedence: ``DECEPTICON_LLM_TIMEOUT_SECONDS`` env > default ``600``.
+    Rejects non-positive or non-numeric env values with ``ValueError`` so
+    misconfiguration fails loudly rather than silently disabling the guard.
+    """
+    raw = os.getenv(LLM_TIMEOUT_ENV, "").strip()
+    if raw:
+        value = float(raw)
+    else:
+        value = float(DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS)
+    if value <= 0:
+        raise ValueError(f"{LLM_TIMEOUT_ENV} must be greater than 0")
+    return value
+
+
+async def call_with_timeout(coro: Awaitable[Any], timeout: float) -> Any:
+    """Wrap ``coro`` in :func:`asyncio.wait_for` and re-raise as :class:`LLMTimeoutError`.
+
+    The translation preserves the original ``asyncio.TimeoutError`` via
+    ``__cause__`` so debugging traces remain intact, while letting upstream
+    code distinguish provider-stall timeouts from generic cancellation.
+    """
+    try:
+        return await asyncio.wait_for(coro, timeout=timeout)
+    except asyncio.TimeoutError as exc:
+        raise LLMTimeoutError(
+            f"LLM request timed out after {timeout:g} seconds"
+        ) from exc
 
 
 # Default ordering when DECEPTICON_AUTH_PRIORITY is not set. OAuth methods
@@ -509,7 +557,12 @@ class _ProxiedChatOpenAI(ChatOpenAI):
 
     async def ainvoke(self, *args, **kwargs):
         try:
-            return await super().ainvoke(*args, **kwargs)
+            return await call_with_timeout(
+                super().ainvoke(*args, **kwargs),
+                _resolve_llm_timeout_seconds(),
+            )
+        except LLMTimeoutError:
+            raise
         except Exception as exc:
             _reraise_with_actionable_message(exc, self.model_name)
             raise
@@ -640,7 +693,10 @@ class _DeepSeekThinkingChatOpenAI(_ProxiedChatOpenAI):
 
     async def _agenerate(self, messages: list[BaseMessage], *args: Any, **kwargs: Any) -> Any:
         """Wrap _agenerate to preserve reasoning_content in the response."""
-        result = await super()._agenerate(messages, *args, **kwargs)
+        result = await call_with_timeout(
+            super()._agenerate(messages, *args, **kwargs),
+            _resolve_llm_timeout_seconds(),
+        )
         return result
 
     def _convert_chunk_to_generation_chunk(

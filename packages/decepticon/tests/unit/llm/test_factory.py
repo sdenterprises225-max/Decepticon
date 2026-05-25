@@ -1176,3 +1176,99 @@ class TestResolveCredentialsForLlamacpp:
 
         creds = _resolve_credentials()
         assert creds.methods == [AuthMethod.LLAMACPP_LOCAL, AuthMethod.ANTHROPIC_API]
+
+
+class TestLLMTimeout:
+    """Whole-coroutine LLM request timeout (DECEPTICON_LLM_TIMEOUT_SECONDS)."""
+
+    def test_call_with_timeout_raises_typed_exception(self) -> None:
+        from decepticon.llm.factory import LLMTimeoutError, call_with_timeout
+
+        async def slow_call() -> str:
+            await asyncio.sleep(10)
+            return "done"
+
+        with pytest.raises(LLMTimeoutError, match="timed out after 0.01 seconds"):
+            asyncio.run(call_with_timeout(slow_call(), 0.01))
+
+    def test_call_with_timeout_preserves_original_timeout_as_cause(self) -> None:
+        from decepticon.llm.factory import LLMTimeoutError, call_with_timeout
+
+        async def slow_call() -> None:
+            await asyncio.sleep(10)
+
+        try:
+            asyncio.run(call_with_timeout(slow_call(), 0.01))
+        except LLMTimeoutError as exc:
+            assert isinstance(exc.__cause__, asyncio.TimeoutError)
+        else:
+            raise AssertionError("expected LLMTimeoutError")
+
+    def test_call_with_timeout_returns_successful_result(self) -> None:
+        from decepticon.llm.factory import call_with_timeout
+
+        async def fast_call() -> str:
+            await asyncio.sleep(0)
+            return "ok"
+
+        assert asyncio.run(call_with_timeout(fast_call(), 1)) == "ok"
+
+    def test_call_with_timeout_propagates_non_timeout_exceptions(self) -> None:
+        from decepticon.llm.factory import LLMTimeoutError, call_with_timeout
+
+        async def failing_call() -> None:
+            raise RuntimeError("upstream 500")
+
+        with pytest.raises(RuntimeError, match="upstream 500"):
+            asyncio.run(call_with_timeout(failing_call(), 1))
+        # And not as a timeout error
+        try:
+            asyncio.run(call_with_timeout(failing_call(), 1))
+        except LLMTimeoutError:
+            raise AssertionError("non-timeout exception was retyped")
+        except RuntimeError:
+            pass
+
+    def test_env_override_takes_effect(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from decepticon.llm.factory import _resolve_llm_timeout_seconds
+
+        monkeypatch.setenv("DECEPTICON_LLM_TIMEOUT_SECONDS", "3")
+        assert _resolve_llm_timeout_seconds() == 3.0
+
+    def test_default_timeout_is_600_when_env_absent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from decepticon.llm.factory import _resolve_llm_timeout_seconds
+
+        monkeypatch.delenv("DECEPTICON_LLM_TIMEOUT_SECONDS", raising=False)
+        assert _resolve_llm_timeout_seconds() == 600.0
+
+    def test_blank_env_falls_back_to_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from decepticon.llm.factory import _resolve_llm_timeout_seconds
+
+        monkeypatch.setenv("DECEPTICON_LLM_TIMEOUT_SECONDS", "   ")
+        assert _resolve_llm_timeout_seconds() == 600.0
+
+    def test_invalid_env_raises_value_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from decepticon.llm.factory import _resolve_llm_timeout_seconds
+
+        monkeypatch.setenv("DECEPTICON_LLM_TIMEOUT_SECONDS", "not-a-number")
+        with pytest.raises(ValueError):
+            _resolve_llm_timeout_seconds()
+
+    def test_non_positive_env_raises_value_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from decepticon.llm.factory import _resolve_llm_timeout_seconds
+
+        monkeypatch.setenv("DECEPTICON_LLM_TIMEOUT_SECONDS", "0")
+        with pytest.raises(ValueError, match="greater than 0"):
+            _resolve_llm_timeout_seconds()
+
+        monkeypatch.setenv("DECEPTICON_LLM_TIMEOUT_SECONDS", "-5")
+        with pytest.raises(ValueError, match="greater than 0"):
+            _resolve_llm_timeout_seconds()
