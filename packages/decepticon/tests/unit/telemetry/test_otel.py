@@ -34,9 +34,7 @@ from decepticon.telemetry.otel import (  # noqa: E402
 )
 
 _SHARED_EXPORTER = InMemorySpanExporter()
-_SHARED_PROVIDER = TracerProvider(
-    resource=Resource.create({"service.name": "decepticon-test"})
-)
+_SHARED_PROVIDER = TracerProvider(resource=Resource.create({"service.name": "decepticon-test"}))
 _SHARED_PROVIDER.add_span_processor(SimpleSpanProcessor(_SHARED_EXPORTER))
 trace.set_tracer_provider(_SHARED_PROVIDER)
 
@@ -125,9 +123,7 @@ def test_record_llm_cost_falls_back_to_engagement_span(
 ) -> None:
     with start_engagement_span("eng-2"):
         record_llm_cost(2.5)
-    eng = next(
-        s for s in memory_exporter.get_finished_spans() if s.name == "decepticon.engagement"
-    )
+    eng = next(s for s in memory_exporter.get_finished_spans() if s.name == "decepticon.engagement")
     assert eng.attributes["decepticon.llm.cost_usd"] == pytest.approx(2.5)
 
 
@@ -135,9 +131,7 @@ def test_record_llm_cost_ignores_none(memory_exporter: InMemorySpanExporter) -> 
     with start_engagement_span("eng-3"):
         with start_llm_span("model-x"):
             record_llm_cost(None)
-    llm = next(
-        s for s in memory_exporter.get_finished_spans() if s.name == "decepticon.llm_call"
-    )
+    llm = next(s for s in memory_exporter.get_finished_spans() if s.name == "decepticon.llm_call")
     assert "decepticon.llm.cost_usd" not in llm.attributes
 
 
@@ -167,14 +161,20 @@ def test_helpers_are_safe_when_otel_packages_missing(
     monkeypatch.setenv("OTEL_ENABLED", "1")
     otel_module._reset_for_tests()
 
-    real_import = __builtins__["__import__"] if isinstance(__builtins__, dict) else __builtins__.__import__
+    real_import = (
+        __builtins__["__import__"] if isinstance(__builtins__, dict) else __builtins__.__import__
+    )
 
     def _no_otel_imports(name: str, *args: object, **kwargs: object) -> object:
         if name.startswith("opentelemetry."):
             raise ImportError("simulated missing otel extra")
         return real_import(name, *args, **kwargs)
 
-    monkeypatch.setitem(__builtins__ if isinstance(__builtins__, dict) else __builtins__.__dict__, "__import__", _no_otel_imports)
+    monkeypatch.setitem(
+        __builtins__ if isinstance(__builtins__, dict) else __builtins__.__dict__,
+        "__import__",
+        _no_otel_imports,
+    )
 
     assert otel_module.init_otel() is False
     with start_engagement_span("eng-no-otel"):

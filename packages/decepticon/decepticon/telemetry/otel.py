@@ -33,12 +33,8 @@ _current_engagement_id: ContextVar[str | None] = ContextVar(
     "decepticon_engagement_id", default=None
 )
 _current_agent: ContextVar[str | None] = ContextVar("decepticon_agent", default=None)
-_current_objective_id: ContextVar[str | None] = ContextVar(
-    "decepticon_objective_id", default=None
-)
-_active_llm_span: ContextVar[Any | None] = ContextVar(
-    "decepticon_active_llm_span", default=None
-)
+_current_objective_id: ContextVar[str | None] = ContextVar("decepticon_objective_id", default=None)
+_active_llm_span: ContextVar[Any | None] = ContextVar("decepticon_active_llm_span", default=None)
 _active_engagement_span: ContextVar[Any | None] = ContextVar(
     "decepticon_active_engagement_span", default=None
 )
@@ -80,9 +76,7 @@ def init_otel() -> bool:
         _INITIALIZED = True
         return False
 
-    provider = TracerProvider(
-        resource=Resource.create({"service.name": _service_name()})
-    )
+    provider = TracerProvider(resource=Resource.create({"service.name": _service_name()}))
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") or None
     exporter = OTLPSpanExporter(endpoint=endpoint) if endpoint else OTLPSpanExporter()
     provider.add_span_processor(BatchSpanProcessor(exporter))
@@ -237,9 +231,7 @@ def record_llm_token_usage(
             pass
     if completion_tokens is not None:
         try:
-            span.set_attribute(
-                "decepticon.llm.completion_tokens", int(completion_tokens)
-            )
+            span.set_attribute("decepticon.llm.completion_tokens", int(completion_tokens))
         except Exception:
             pass
 
