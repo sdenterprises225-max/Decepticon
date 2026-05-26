@@ -1235,34 +1235,26 @@ class TestLLMTimeout:
         monkeypatch.setenv("DECEPTICON_LLM_TIMEOUT_SECONDS", "3")
         assert _resolve_llm_timeout_seconds() == 3.0
 
-    def test_default_timeout_is_600_when_env_absent(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_default_timeout_is_600_when_env_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from decepticon.llm.factory import _resolve_llm_timeout_seconds
 
         monkeypatch.delenv("DECEPTICON_LLM_TIMEOUT_SECONDS", raising=False)
         assert _resolve_llm_timeout_seconds() == 600.0
 
-    def test_blank_env_falls_back_to_default(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_blank_env_falls_back_to_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from decepticon.llm.factory import _resolve_llm_timeout_seconds
 
         monkeypatch.setenv("DECEPTICON_LLM_TIMEOUT_SECONDS", "   ")
         assert _resolve_llm_timeout_seconds() == 600.0
 
-    def test_invalid_env_raises_value_error(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_invalid_env_raises_value_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from decepticon.llm.factory import _resolve_llm_timeout_seconds
 
         monkeypatch.setenv("DECEPTICON_LLM_TIMEOUT_SECONDS", "not-a-number")
         with pytest.raises(ValueError):
             _resolve_llm_timeout_seconds()
 
-    def test_non_positive_env_raises_value_error(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_non_positive_env_raises_value_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from decepticon.llm.factory import _resolve_llm_timeout_seconds
 
         monkeypatch.setenv("DECEPTICON_LLM_TIMEOUT_SECONDS", "0")

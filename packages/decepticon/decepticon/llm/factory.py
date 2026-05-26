@@ -88,9 +88,7 @@ async def call_with_timeout(coro: Awaitable[Any], timeout: float) -> Any:
     try:
         return await asyncio.wait_for(coro, timeout=timeout)
     except asyncio.TimeoutError as exc:
-        raise LLMTimeoutError(
-            f"LLM request timed out after {timeout:g} seconds"
-        ) from exc
+        raise LLMTimeoutError(f"LLM request timed out after {timeout:g} seconds") from exc
 
 
 # Default ordering when DECEPTICON_AUTH_PRIORITY is not set. OAuth methods
