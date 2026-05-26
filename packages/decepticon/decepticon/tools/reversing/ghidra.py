@@ -5,9 +5,9 @@ reverser agent real decompilation, cross-references, and function
 listings without leaving the sandbox.
 
 Two backends:
-  1. **Headless** ΓÇö ``analyzeHeadless`` + a postScript that dumps JSON.
+  1. **Headless** — ``analyzeHeadless`` + a postScript that dumps JSON.
      Works everywhere Ghidra is installed.  Env: ``GHIDRA_INSTALL_DIR``.
-  2. **MCP bridge** ΓÇö HTTP calls to a running ghidra-mcp server.
+  2. **MCP bridge** — HTTP calls to a running ghidra-mcp server.
      Env: ``GHIDRA_MCP_URL`` (default ``http://127.0.0.1:8089``).
 
 The tools auto-select: MCP when reachable, headless otherwise.
@@ -355,7 +355,7 @@ def _run_headless(binary: str, script_body: str, *script_args: str) -> dict[str,
 
 
 def ghidra_analyze_binary(binary: str) -> GhidraAnalysis:
-    """Analyze a binary with Ghidra ΓÇö MCP if available, headless otherwise."""
+    """Analyze a binary with Ghidra — MCP if available, headless otherwise."""
     # Try MCP first
     if _mcp_available():
         try:
@@ -393,7 +393,7 @@ def ghidra_analyze_binary(binary: str) -> GhidraAnalysis:
 
 
 def ghidra_decompile_function(binary: str, function_name: str) -> GhidraDecompilation:
-    """Decompile a single function ΓÇö MCP if available, headless otherwise."""
+    """Decompile a single function — MCP if available, headless otherwise."""
     # Try MCP
     if _mcp_available():
         try:
@@ -449,7 +449,7 @@ def ghidra_decompile_function(binary: str, function_name: str) -> GhidraDecompil
 
 
 def ghidra_get_xrefs(binary: str, address: str) -> list[GhidraXref]:
-    """Get cross-references to an address ΓÇö MCP only (headless is too slow)."""
+    """Get cross-references to an address — MCP only (headless is too slow)."""
     if not _mcp_available():
         return []
     try:
