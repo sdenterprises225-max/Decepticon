@@ -134,7 +134,9 @@ def create_phisher_agent(
 
 # Module-level graph for LangGraph Platform (langgraph serve)
 if is_bundle_enabled("standard"):
-    graph = create_phisher_agent()  # noqa: F841  # consumed by langgraph platform at runtime
+    graph = (
+        create_phisher_agent()
+    )  # lgtm[py/unused-global-variable]  # consumed by langgraph at runtime
 
 
 SUBAGENT_SPEC = SubAgentSpec(

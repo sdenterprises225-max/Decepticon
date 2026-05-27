@@ -143,7 +143,7 @@ class TestExtractTargets:
 
     def test_extracts_curl_url(self) -> None:
         targets = extract_targets("curl -X GET https://api.acme.com/v1/users")
-        assert "api.acme.com" in targets
+        assert {"api.acme.com"} <= targets
 
     def test_extracts_hostname_after_verb(self) -> None:
         assert "target.example" in extract_targets("nmap target.example -p 80")
