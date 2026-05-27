@@ -6,20 +6,16 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
 from langchain_core.messages import ToolMessage
 
 from decepticon.middleware._audit_sink import RoEAuditSink, verify_ledger
 from decepticon.middleware._command_targets import extract_targets
 from decepticon.middleware.roe import (
-    GATED_TOOL_NAMES,
     RoEEnforcementMiddleware,
 )
 from decepticon_core.types.roe import (
-    Decision,
     EnforcementMode,
     MachineEnforcement,
-    ScopeRule,
     evaluate_command,
     evaluate_target,
 )

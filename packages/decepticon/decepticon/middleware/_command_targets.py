@@ -30,7 +30,6 @@ import ipaddress
 import re
 import shlex
 
-
 _IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 _CIDR_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}\b")
 _URL_RE = re.compile(r"\b(?:https?|ftp|file|smb|nfs|ssh|rdp|ldaps?)://([^\s/:]+)", re.IGNORECASE)
