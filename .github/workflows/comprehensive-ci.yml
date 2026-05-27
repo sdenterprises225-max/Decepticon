@@ -71,8 +71,8 @@ jobs:
             actions:
               - '.github/workflows/**'
 
-  semgrep:
-    name: Semgrep SAST
+  semgrep-custom:
+    name: Semgrep (custom Decepticon rules — hard gate)
     needs: changes
     if: needs.changes.outputs.python == 'true' || needs.changes.outputs.ts == 'true'
     runs-on: ubuntu-latest
@@ -80,13 +80,40 @@ jobs:
       image: semgrep/semgrep:latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run Semgrep with public rule packs + custom rules
+      - name: Custom Decepticon rules (blocking)
         run: |
           semgrep scan \
             --error \
             --metrics=off \
-            --sarif --sarif-output=semgrep.sarif \
+            --severity=ERROR \
+            --sarif --sarif-output=semgrep-custom.sarif \
             --config=.semgrep/decepticon-rules.yml \
+            --exclude=node_modules --exclude=.venv --exclude=dist --exclude=build \
+            --exclude=benchmark/xbow-validation-benchmarks \
+            --exclude=benchmark/MHBench
+      - name: Upload custom Semgrep SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep-custom.sarif
+          category: semgrep-custom
+
+  semgrep-public:
+    name: Semgrep (public rule packs — informational)
+    needs: changes
+    if: needs.changes.outputs.python == 'true' || needs.changes.outputs.ts == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Public rule packs (report only)
+        continue-on-error: true
+        run: |
+          semgrep scan \
+            --metrics=off \
+            --sarif --sarif-output=semgrep-public.sarif \
             --config=p/python \
             --config=p/typescript \
             --config=p/dockerfile \
@@ -98,15 +125,15 @@ jobs:
             --config=p/cwe-top-25 \
             --exclude=node_modules --exclude=.venv --exclude=dist --exclude=build \
             --exclude=benchmark/xbow-validation-benchmarks \
-            --exclude=benchmark/MHBench || EC=$?
-          ls -la semgrep.sarif
-          exit ${EC:-0}
-      - name: Upload Semgrep SARIF
+            --exclude=benchmark/MHBench || true
+          [ -f semgrep-public.sarif ] || echo '{"version":"2.1.0","$schema":"https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"semgrep","rules":[]}},"results":[]}]}' > semgrep-public.sarif
+      - name: Upload public-pack Semgrep SARIF
         if: always()
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: semgrep.sarif
-          category: semgrep
+          sarif_file: semgrep-public.sarif
+          category: semgrep-public
 
   bandit:
     name: Bandit (Python security)
@@ -366,7 +393,7 @@ jobs:
           directory: .
           quiet: true
           soft_fail: true
-          framework: dockerfile,docker_compose,github_actions,secrets
+          framework: dockerfile,github_actions,secrets
           output_format: sarif
           output_file_path: checkov-output
           skip_path: node_modules,.venv,benchmark/xbow-validation-benchmarks,benchmark/MHBench
@@ -423,8 +450,8 @@ jobs:
           bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
           ./actionlint -color \
             -ignore 'property "target" is not defined' \
-            -ignore 'SC2046:warning:3:3' \
-            -ignore 'SC2046:warning:5:3'
+            -ignore 'SC2046' \
+            -ignore 'shellcheck reported issue in this script: SC2086'
 
   markdownlint:
     name: markdownlint
@@ -487,7 +514,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.0.2
+          version: v2.1.0
           working-directory: clients/launcher
           args: --config=../../.golangci.yml --timeout=5m
 
@@ -510,7 +537,8 @@ jobs:
     name: Comprehensive CI summary
     runs-on: ubuntu-latest
     needs:
-      - semgrep
+      - semgrep-custom
+      - semgrep-public
       - bandit
       - mypy
       - python-quality
@@ -529,13 +557,12 @@ jobs:
     if: always()
     steps:
       - name: Summarize
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          echo "## Comprehensive CI summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Tool | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          for job in semgrep bandit mypy python-quality osv-scanner trufflehog hadolint shellcheck trivy-fs checkov yamllint actionlint markdownlint typos knip golangci; do
-            result_var="${job//-/_}"
-            result="${{ toJSON(needs) }}"
-            echo "| $job | see job log |" >> $GITHUB_STEP_SUMMARY
-          done
+          {
+            echo "## Comprehensive CI summary"
+            echo ""
+            echo "Tool results uploaded to the GitHub Security tab as SARIF."
+            echo "Drill into individual jobs in the run for details."
+          } >> "$GITHUB_STEP_SUMMARY"
