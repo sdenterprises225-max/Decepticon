@@ -29,9 +29,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
-from decepticon.tools.research._apoc_safety import ensure_safe
 from decepticon.tools.research._engagement_scope import (
-    get_active_engagement,
     with_engagement_property,
 )
 from decepticon_core.types.kg import Edge, EdgeKind, KnowledgeGraph, Node, NodeKind

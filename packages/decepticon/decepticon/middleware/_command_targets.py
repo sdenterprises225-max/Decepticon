@@ -30,7 +30,6 @@ import ipaddress
 import re
 import shlex
 from collections.abc import Callable
-from typing import Any
 
 _IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 _CIDR_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}\b")

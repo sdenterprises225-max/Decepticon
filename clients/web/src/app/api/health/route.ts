@@ -8,7 +8,6 @@ const LITELLM_URL = process.env.LITELLM_URL ?? "http://litellm:4000";
 // a misconfigured stack. Require the env var to be set; otherwise the
 // LiteLLM check reports degraded.
 const LITELLM_KEY = process.env.LITELLM_API_KEY ?? "";
-const NEO4J_URI = process.env.NEO4J_URI ?? "bolt://neo4j:7687";
 const NEO4J_HTTP_URL = process.env.NEO4J_HTTP_URL ?? "http://neo4j:7474";
 
 interface ServiceHealth {
