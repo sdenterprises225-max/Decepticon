@@ -10,10 +10,16 @@ name: Auto Tag
 #   GitHub suppresses workflow triggers from tags pushed with the default
 #   GITHUB_TOKEN (loop prevention). For release.yml to fire automatically on
 #   the tag this creates, add a repo secret RELEASE_PLEASE_TOKEN — a
-#   fine-grained PAT with `contents: write`. Without it the tag is still
-#   created correctly; build it by running release-recover.yml
-#   (workflow_dispatch) for that tag, or it builds on the next tag once the
-#   PAT is configured.
+#   fine-grained PAT with `contents: write`. Without the PAT the tag is still
+#   created correctly, but release.yml will NOT build it on its own — tags
+#   pushed by GITHUB_TOKEN don't trigger workflows. To build such a tag,
+#   re-push it from a credential that does trigger workflows (a maintainer's
+#   manual push):
+#       git push origin :refs/tags/vX.Y.Z   # delete the remote tag
+#       git push origin vX.Y.Z              # re-push -> triggers release.yml
+#   release-recover.yml does NOT help here: it only verifies already-built
+#   images and finalizes the release, it never builds one. Once the PAT is
+#   set, every future auto-tag builds automatically.
 
 on:
   push:
@@ -72,4 +78,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$NEW_TAG" -m "Release $NEW_TAG"
           git push origin "$NEW_TAG"
-          echo "::notice::Pushed $NEW_TAG. release.yml fires automatically only when RELEASE_PLEASE_TOKEN (PAT) is set; otherwise run release-recover.yml for $NEW_TAG."
+          echo "::notice::Pushed $NEW_TAG. release.yml builds it automatically only when RELEASE_PLEASE_TOKEN (PAT) is set. Otherwise re-push the tag manually (git push origin :refs/tags/$NEW_TAG && git push origin $NEW_TAG) to trigger release.yml — release-recover.yml only finalizes an already-built release, it cannot build one."

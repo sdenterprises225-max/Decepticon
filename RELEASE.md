@@ -54,10 +54,21 @@ never builds or publishes, so release atomicity is unchanged.
 **One-time setup for fully-automatic releases:** GitHub suppresses workflow
 triggers from tags pushed with the default `GITHUB_TOKEN`. Add a repo secret
 **`RELEASE_PLEASE_TOKEN`** (a fine-grained PAT with `contents: write`) so the
-auto-tag's tag triggers `release.yml`. Without it the tag is still created
-correctly — build it via `release-recover.yml` (`workflow_dispatch`), or it
-builds on the next tag once the PAT is configured. The manual `git tag` flow
-above also still works for out-of-band releases.
+auto-tag's tag triggers `release.yml`. Without the PAT the tag is still created
+correctly, but `release.yml` will **not** build it on its own — a
+`GITHUB_TOKEN`-pushed tag does not trigger workflows. To build such a tag,
+re-push it from a credential that does (a maintainer's manual push):
+
+```bash
+git push origin :refs/tags/vX.Y.Z   # delete the remote tag
+git push origin vX.Y.Z              # re-push → triggers release.yml
+```
+
+`release-recover.yml` does **not** help here — it only verifies already-built
+images and finalizes the release, it never builds one (see
+[Recovering a failed release](#recovering-a-failed-release)). Once the PAT is
+configured, every future auto-tag builds automatically. The manual `git tag`
+flow above also still works for out-of-band releases.
 
 ## What the release workflow does
 
