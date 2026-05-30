@@ -33,7 +33,10 @@ from collections.abc import Callable
 
 _IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 _CIDR_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}\b")
-_URL_RE = re.compile(r"\b(?:https?|ftp|file|smb|nfs|ssh|rdp|ldaps?)://([^\s/:]+)", re.IGNORECASE)
+_URL_RE = re.compile(
+    r"\b(?:https?|ftp|file|smb|nfs|ssh|rdp|ldaps?)://(?:[^\s/@]+@)?([^\s/:@]+)",
+    re.IGNORECASE,
+)
 _HOSTNAME_AFTER_VERB_RE = re.compile(
     r"\b(?:curl|wget|httpx|nmap|masscan|rustscan|ssh|scp|sftp|rsync|"
     r"smbclient|smbmap|crackmapexec|nxc|netexec|nikto|sqlmap|hydra|ffuf|"
@@ -47,10 +50,15 @@ _HOSTNAME_AFTER_VERB_RE = re.compile(
 )
 
 
-# Final labels that mark a token as a local file argument, never a network
-# target. No public DNS TLD collides with any of these, so excluding them is
-# safe and prevents RoE ENFORCE mode from refusing legitimate commands whose
-# option values (``-i key.pem``, ``-oA scan.txt``) look hostname-shaped.
+# Final labels that mark a token as a local-file argument, never a network
+# target, so RoE ENFORCE mode does not refuse legitimate commands whose option
+# values (``-i key.pem``, ``-oA scan.txt``) look hostname-shaped.
+#
+# SECURITY: an entry here is only safe if it is NOT also a delegated DNS TLD.
+# Real TLDs (``.sh`` ``.md`` ``.py`` ``.pl`` ``.pub`` ``.zip`` …) were removed:
+# leaving them in silently dropped genuine hosts such as ``evil.zip`` from RoE
+# scope enforcement. Per this module's design, over-extracting a spurious
+# target (which the operator can override) is safer than dropping a real one.
 _NON_TARGET_EXTENSIONS: frozenset[str] = frozenset(
     {
         "pem",
@@ -61,7 +69,6 @@ _NON_TARGET_EXTENSIONS: frozenset[str] = frozenset(
         "der",
         "p12",
         "pfx",
-        "pub",
         "txt",
         "log",
         "json",
@@ -76,12 +83,8 @@ _NON_TARGET_EXTENSIONS: frozenset[str] = frozenset(
         "xml",
         "html",
         "htm",
-        "md",
         "rst",
-        "sh",
-        "py",
         "rb",
-        "pl",
         "ps1",
         "bat",
         "pcap",
@@ -95,7 +98,6 @@ _NON_TARGET_EXTENSIONS: frozenset[str] = frozenset(
         "sqlite",
         "sqlite3",
         "gz",
-        "zip",
         "tar",
         "tgz",
         "7z",
