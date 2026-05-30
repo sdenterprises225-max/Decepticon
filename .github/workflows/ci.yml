@@ -9,6 +9,7 @@ on:
     branches: [main]
     paths-ignore:
       - "*.md"
+      - "!CHANGELOG.md"   # release notes — required ruleset checks must run
       - LICENSE
       - docs/**
       - assets/**
@@ -17,6 +18,7 @@ on:
     branches: [main]
     paths-ignore:
       - "*.md"
+      - "!CHANGELOG.md"   # release notes — required ruleset checks must run
       - LICENSE
       - docs/**
       - assets/**
