@@ -54,6 +54,13 @@ CORE_PUBLIC_API: tuple[tuple[str, str], ...] = (
     ("decepticon_core.types.kg", "EdgeKind"),
     ("decepticon_core.types.kg", "Severity"),
     ("decepticon_core.types.kg", "KnowledgeGraph"),
+    # decepticon_core.types.roe — machine-readable RoE enforcement schema
+    ("decepticon_core.types.roe", "EnforcementMode"),
+    ("decepticon_core.types.roe", "ScopeRule"),
+    ("decepticon_core.types.roe", "MachineEnforcement"),
+    ("decepticon_core.types.roe", "Decision"),
+    ("decepticon_core.types.roe", "evaluate_target"),
+    ("decepticon_core.types.roe", "evaluate_command"),
     # decepticon_core.protocols
     ("decepticon_core.protocols", "BackendProtocol"),
     ("decepticon_core.protocols", "MiddlewareProtocol"),
@@ -129,7 +136,7 @@ def test_manifest_count_unchanged() -> None:
     a major-version bump is an audit signal.
     """
     # Update this number deliberately when adding/removing public names.
-    expected = 69
+    expected = 75
     actual = len(CORE_PUBLIC_API)
     assert actual == expected, (
         f"CORE_PUBLIC_API has {actual} entries, expected {expected}. "
