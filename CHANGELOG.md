@@ -6,6 +6,161 @@ follows [Semantic Versioning](https://semver.org/) from `1.0.0`
 onward (the `0.x` cycle is pre-stable per the core/framework/sdk split
 design spec, §13.4).
 
+## [1.1.4] — 2026-05-30
+
+Capability + safety expansion on top of `v1.1.3`. Lands the Sisyphus
+mega-PR (#350) [16 sub-PRs] and the 6-tier hardening + Offensive Vaccine
+runtime (#342), the static-analysis CI arsenal (#343), three new
+specialist agents, the Skillogy skill-as-a-service layer, six new
+safety/security middleware, and the Makefile-as-single-source-of-truth
+CI refactor (#443). The OSS default runtime, public plugin contract
+(`decepticon-core` / `decepticon-sdk` surface), and three-package layout
+are unchanged. All three Python packages release in lockstep.
+
+### Added
+
+- **Three specialist agents** — `Phisher`, `MobileOperator`,
+  `WirelessOperator`. Each ships with a prompt under
+  `agents/prompts/standard/` and a factory under `agents/standard/`.
+  (#342)
+- **Skillogy — skill-as-a-service** — dedicated gRPC + REST layer at
+  `packages/decepticon/decepticon/skillogy/` (Dockerfile under
+  `containers/skillogy.Dockerfile`). v0.1 design spec in
+  `docs/design/skillogy.md`; user docs in `docs/skillogy.md`. Skill
+  authoring (`SKILL.md`) is unchanged — Skillogy is a discovery layer
+  on top. Ships behind a feature flag until benchmark validation
+  passes. (#350, #445)
+- **Blue cell — Offensive Vaccine runtime** — `blue_cell/` adds the
+  tap + Sigma matcher infrastructure for the attack → defend → verify
+  loop. Sigma/YARA → SIEM/EDR push exporters. (#342)
+- **Six new safety / security middleware** — `PromptInjectionShield`
+  (agent self-defense), `BudgetEnforcementMiddleware` (spend caps),
+  `UntrustedOutputMiddleware` (structural quarantine for tool output),
+  `HITLApprovalMiddleware` (transport-abstracted human-in-the-loop),
+  `RoEMiddleware` (RoE enforcement + HMAC-chained audit log),
+  `SkillogyMiddleware` (dynamic skill graph dispatch). (#342, #350)
+- **OpenTelemetry exporter** — opt-in spans for engagement / agent /
+  tool / LLM events; runs alongside LangSmith. New runtime deps
+  `opentelemetry-{api,sdk,exporter-otlp}>=1.27`. (#350)
+- **Static-analysis CI arsenal (18 tools)** — Semgrep custom rules
+  (`.semgrep/`), bandit, deptry, vulture, refurb, radon, xenon, mypy,
+  yamllint added under a new `lint` dependency group. OpenSSF
+  Scorecard workflow. Consolidated `security.yml` and
+  `security-scan-example.yml` workflows. (#343)
+- **SARIF v2.1.0 export** for GitHub code scanning + DefectDojo. (#350)
+- **Sandbox tool expansion** — Caido proxy bundle (capture / replay /
+  scope / sitemap), persistent Playwright browser sessions
+  (`browser_action` multiplex), `tmux pipe-pane → asciicast v2`
+  evidence export, WAVE-4 6.1 Buttercup benchmark integration,
+  WAVE-5 sandbox tools. (#350)
+- **`decepticon-cli`** — `decepticon-cli auth` (headless provider /
+  auth introspection); `decepticon-cli scan` + GitHub Action template
+  for CI/CD parity. (#342, #350)
+- **Runtime infrastructure** — bounded graceful SIGTERM/SIGINT
+  shutdown library; append-only engagement `events.jsonl` log;
+  record/replay layer for deterministic re-execution; CART skeleton
+  with OPPLAN-matrix adapter seam; `SubAgentTaskSpec` data contract
+  for scoped child dispatch; skill registry + slug/fuzzy resolver for
+  dynamic `load_skill`. (#350)
+- **Per-engagement isolation** — sandbox minimum-cap hardening;
+  Neo4j per-engagement scoping (closes cross-engagement leak);
+  allowlist-only APOC with client-side safety guard; Decepticon
+  self-threat-model documented at
+  `docs/security/decepticon-threat-model.md`. (#342)
+- **Five new security docs** under `docs/security/` — decepticon
+  threat model, Neo4j hardening, prompt-injection defense, sandbox
+  isolation, sisyphus-pr top-level summary. (#342)
+- **`Makefile` two-tier gate** — `make quality` mirrors the CI PR
+  lane (`ci-lint` + `ci-test` + CLI + Web); `make quality-strict`
+  mirrors the CI main-push lane (coverage 35% gate + full
+  basedpyright warning audit). `.github/workflows/ci.yml` dispatches
+  via `make` so local and CI cannot drift. (#443)
+- **`scripts/check_basedpyright_errors.py`** — testable extraction of
+  the inline Python that gated CI on basedpyright errors. (#443)
+
+### Changed
+
+- **Skill metadata schema** — `metadata.kind` (`reporting` |
+  `analytic`) added to four `SKILL.md` files (the reporting +
+  kill-chain-analysis set) for Skillogy graph node classification.
+  Redundant `mitre_attack:` lists cleared on these four; the mappings
+  move into typed graph edges. Other SKILL.md files unchanged. (#445)
+- **`docs/skills.md`** — heads-up note linking to Skillogy as the
+  planned successor to text-matching `SkillsMiddleware`. (#445)
+- **`codeql.yml` workflow removed**, replaced by the consolidated
+  `security.yml` (Semgrep custom rules + Trivy + bandit, deptry,
+  vulture, etc.). (#343)
+- **`xbow-validation-benchmarks` submodule** bumped
+  `ec45927 → 1c15c32` — XBEN-099-24 FLAG plumbing (4 fixes),
+  XBEN-084-24 base image bump (`node:14-alpine` → `node:18-alpine`),
+  `.gitignore` for OMC local state. (#444)
+
+### Fixed
+
+- **`bash` tool — cross-thread fallback for HTTPSandbox `ContextVar`**.
+  (#345)
+- **streaming events** — `tool_call_id` included in
+  `subagent_tool_call` / `subagent_tool_result` events so downstream
+  consumers can correlate calls and results. (#346)
+- **engagement workspace** — auto-materialized at orchestrator start;
+  internal paths masked in error messages. (#347)
+- **LLM subscription routing** — configured subscriptions used by
+  default (auth priority). Fixes a regression introduced by the
+  Sisyphus mega-PR. (#351)
+- **Claude API `cache_control`** — capped when system blocks share
+  content, preventing the 4-block hard limit from being exceeded.
+  (#402)
+- **OSS launcher UX** — de-duplicate `ctrl+o` hint; silence
+  `DECEPTICON_STACK_NAME` compose warning when the stack name is the
+  default. (#344)
+- **Sandbox zombie reaper** — replaced the in-process SIGCHLD handler
+  (clobbered exit codes) with `tini` (`init: true` on the sandbox
+  compose service). (#340)
+- **`asyncio.wait_for` timeout wrapper** around LiteLLM `acompletion`
+  — caps provider hangs. (#297)
+- **proxy env vars** inherited into sandbox tmux sessions for
+  consistent `HTTP{S}_PROXY` / `NO_PROXY` propagation. (#296)
+- **Five `test_initialize_*` mocks** in `test_session_log.py` — cover
+  the `_sync_passthrough_env()` calls added by #296. Without this,
+  every initialize test raised `StopIteration` under the stricter
+  PR gate. (#443)
+- **Cross-engagement Neo4j leak**, multiple hardcoded credentials,
+  and one `verify=False` regression. (#342)
+- Numerous post-#350 audit fixes — semgrep rule exclusions, GHAS
+  findings, basedpyright `Optional` guards, codex token leak,
+  JWT non-string headers, recording-replay fidelity, reverser
+  robustness, RoE FQDN normalization, sandbox token const-time
+  comparison, web engagement path traversal, AD BloodHound zipbomb
+  stats, others. (#350)
+
+### Security
+
+- **PromptInjectionShield middleware** — agent self-defense against
+  prompt injection in tool output. (#342)
+- **UntrustedOutputMiddleware** — structural quarantine for tool
+  output before it reaches the model. (#342)
+- **RoE enforcement + HMAC-chained audit log** — RoE violations are
+  rejected at middleware boundary; every dispatch logged with HMAC
+  chaining for tamper-evidence. (#342)
+- **Per-engagement Neo4j scoping** — closes the cross-engagement leak
+  where one engagement's KG findings were visible to another. (#342)
+- **Sandbox minimum-cap hardening** — drops unnecessary Linux
+  capabilities from the sandbox container by default. (#342)
+- **18-tool static-analysis CI** — bandit, Semgrep custom rules,
+  Trivy, deptry, vulture, refurb, etc. integrated into the PR gate;
+  SARIF uploaded to GitHub code scanning. (#343)
+
+### Notes
+
+- All three Python packages (`decepticon-core`, `decepticon`,
+  `decepticon-sdk`) release in lockstep at `1.1.4`.
+- `decepticon-core` and `decepticon-sdk` surface (the public
+  plugin-author contract) is unchanged in this release. All additions
+  land in `decepticon` (the framework).
+- Pre-1.0 cleanup mode continues — see the design spec at
+  `docs/superpowers/specs/2026-05-23-core-framework-sdk-split-design.md`
+  for the rationale.
+
 ## [1.1.3] — 2026-05-27
 
 Consolidation release on top of `v1.1.2` (the core/framework/sdk split).
