@@ -27,19 +27,21 @@ import pytest
 # does not install LiteLLM (it's a runtime container dep), so we inject a
 # minimal stub before loading the module.
 if "litellm" not in sys.modules:
-    _litellm = types.ModuleType("litellm")
+    sys.modules["litellm"] = types.ModuleType("litellm")
 
-    class _AuthenticationError(Exception):
-        def __init__(self, message: str = "", model: str = "", llm_provider: str = "") -> None:
-            super().__init__(message)
-            self.message = message
-            self.model = model
-            self.llm_provider = llm_provider
+import litellm  # noqa: E402  — resolved via the stub above when LiteLLM is absent
 
-    _litellm.AuthenticationError = _AuthenticationError  # type: ignore[attr-defined]
-    sys.modules["litellm"] = _litellm
 
-import litellm  # noqa: E402  — resolved via the stub above
+class _StubAuthenticationError(Exception):
+    def __init__(self, message: str = "", model: str = "", llm_provider: str = "") -> None:
+        super().__init__(message)
+        self.message = message
+        self.model = model
+        self.llm_provider = llm_provider
+
+
+if not hasattr(litellm, "AuthenticationError"):
+    litellm.AuthenticationError = _StubAuthenticationError
 
 _MODULE_PATH = Path(__file__).resolve().parents[5] / "config" / "oauth_token_store.py"
 _spec = importlib.util.spec_from_file_location("decepticon_oauth_token_store", _MODULE_PATH)
