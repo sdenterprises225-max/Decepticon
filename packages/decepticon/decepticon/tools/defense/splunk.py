@@ -35,6 +35,14 @@ def _quote_spl(value: Any) -> str:
     return str(value)
 
 
+def _spl_escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _needs_spl_quoting(value: str) -> bool:
+    return " " in value or '"' in value
+
+
 def _selection_to_spl(selection: dict[str, Any]) -> str:
     clauses: list[str] = []
     for field, value in selection.items():
@@ -53,11 +61,20 @@ def _selection_to_spl(selection: dict[str, Any]) -> str:
 def _field_clause(field: str, modifier: str, value: Any) -> str:
     quoted = _quote_spl(value)
     if modifier == "contains":
-        return f"{field}=*{value}*" if isinstance(value, str) else f"{field}={quoted}"
+        if isinstance(value, str):
+            inner = _spl_escape(value) if _needs_spl_quoting(value) else value
+            return f'{field}="*{inner}*"' if _needs_spl_quoting(value) else f"{field}=*{inner}*"
+        return f"{field}={quoted}"
     if modifier == "startswith":
-        return f"{field}={value}*" if isinstance(value, str) else f"{field}={quoted}"
+        if isinstance(value, str):
+            inner = _spl_escape(value) if _needs_spl_quoting(value) else value
+            return f'{field}="{inner}*"' if _needs_spl_quoting(value) else f"{field}={inner}*"
+        return f"{field}={quoted}"
     if modifier == "endswith":
-        return f"{field}=*{value}" if isinstance(value, str) else f"{field}={quoted}"
+        if isinstance(value, str):
+            inner = _spl_escape(value) if _needs_spl_quoting(value) else value
+            return f'{field}="*{inner}"' if _needs_spl_quoting(value) else f"{field}=*{inner}"
+        return f"{field}={quoted}"
     if modifier in ("", "equals"):
         return f"{field}={quoted}"
     raise SigmaConversionError(f"unsupported Sigma modifier ``{modifier}``")
