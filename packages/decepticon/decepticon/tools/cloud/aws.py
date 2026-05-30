@@ -134,7 +134,47 @@ def analyze_iam_policy(policy: str | dict[str, Any]) -> list[IAMFinding]:
         effect = (stmt.get("Effect") or "Allow").lower()
         if effect != "allow":
             continue
-        for action in _as_list(stmt.get("Action") or stmt.get("NotAction") or "*"):
+
+        not_action_list = stmt.get("NotAction")
+        if not_action_list is not None:
+            excluded = [str(a).lower() for a in _as_list(not_action_list)]
+            resources = _as_list(stmt.get("Resource") or "*")
+            has_star_resource = any(str(r) == "*" for r in resources)
+            resource_summary = ", ".join(str(r) for r in resources)
+            excluded_summary = ", ".join(excluded) if excluded else "(none)"
+            idx += 1
+            if has_star_resource:
+                findings.append(
+                    IAMFinding(
+                        id=f"iam-{idx:04d}",
+                        severity="critical",
+                        title="Allow with NotAction on Resource=* grants near-admin",
+                        detail=(
+                            f"NotAction excludes only: {excluded_summary}. "
+                            "All other actions are allowed on every resource — "
+                            "effective admin grant."
+                        ),
+                        action=f"NotAction: {excluded_summary}",
+                        resource="*",
+                    )
+                )
+            else:
+                findings.append(
+                    IAMFinding(
+                        id=f"iam-{idx:04d}",
+                        severity="high",
+                        title="Allow with NotAction — inverted action set",
+                        detail=(
+                            f"NotAction excludes: {excluded_summary} on {resource_summary}. "
+                            "All other actions on those resources are implicitly allowed."
+                        ),
+                        action=f"NotAction: {excluded_summary}",
+                        resource=resource_summary,
+                    )
+                )
+            continue
+
+        for action in _as_list(stmt.get("Action") or "*"):
             act = str(action).lower()
             for resource in _as_list(stmt.get("Resource") or "*"):
                 res = str(resource)
@@ -151,7 +191,6 @@ def analyze_iam_policy(policy: str | dict[str, Any]) -> list[IAMFinding]:
                         )
                     )
                     continue
-                # Wildcarded action families
                 if act.endswith(":*") and res == "*":
                     idx += 1
                     findings.append(
@@ -164,7 +203,6 @@ def analyze_iam_policy(policy: str | dict[str, Any]) -> list[IAMFinding]:
                             resource=res,
                         )
                     )
-                # Known privesc primitives
                 matched = _PRIVESC_PRIMITIVES.get(act.strip("*"))
                 if matched:
                     sev, title, detail = matched
