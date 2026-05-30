@@ -58,6 +58,7 @@ def _string_or_empty(value: Any) -> str:
 
 def _finding_rule_id(node: Any, props: dict[str, Any]) -> str:
     cwe = props.get("cwe") or ""
+    cwe = cwe[0] if isinstance(cwe, list) and cwe else (cwe or "")
     cve = props.get("cve") or ""
     technique = props.get("mitre_attack") or props.get("technique_id") or ""
     klass = props.get("vuln_class") or ""
@@ -154,7 +155,7 @@ def _iter_findings(graph: Any):
     for node in nodes.values() if hasattr(nodes, "values") else nodes:
         if _kind_label(getattr(node, "kind", None)) not in _FINDING_KINDS:
             continue
-        props = dict(getattr(node, "properties", {}) or {})
+        props = dict(getattr(node, "props", None) or getattr(node, "properties", {}) or {})
         if not props.get("severity"):
             props["severity"] = "medium"
         yield node, props

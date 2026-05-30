@@ -10,6 +10,7 @@ from decepticon.tools.research.sarif_export import (
     severity_threshold_breach,
     write_sarif,
 )
+from decepticon_core.types.kg import KnowledgeGraph, Node, NodeKind
 
 
 class _FakeNode:
@@ -145,3 +146,57 @@ def test_export_default_severity_is_medium_when_missing():
     node = _FakeNode("f", "finding", "f", {})
     doc = export_findings_to_sarif(_FakeGraph([node]))
     assert doc["runs"][0]["results"][0]["level"] == "warning"
+
+
+def _real_finding_graph(**props) -> KnowledgeGraph:
+    g = KnowledgeGraph()
+    g.upsert_node(Node.make(NodeKind.FINDING, props.pop("label", "SQLi in /search"), **props))
+    return g
+
+
+def test_export_reads_real_node_props_for_severity():
+    graph = _real_finding_graph(severity="high")
+    result = export_findings_to_sarif(graph)["runs"][0]["results"][0]
+    assert result["level"] == "error"
+    assert result["properties"]["security-severity"] == "7.0"
+
+
+def test_export_real_node_critical_security_severity():
+    graph = _real_finding_graph(severity="critical")
+    result = export_findings_to_sarif(graph)["runs"][0]["results"][0]
+    assert result["level"] == "error"
+    assert result["properties"]["security-severity"] == "10.0"
+
+
+def test_export_real_node_cwe_list_yields_well_formed_rule_id():
+    graph = _real_finding_graph(severity="high", cwe=["CWE-89"])
+    rule_id = export_findings_to_sarif(graph)["runs"][0]["results"][0]["ruleId"]
+    assert rule_id == "decepticon/CWE-89"
+    assert "[" not in rule_id and "'" not in rule_id
+
+
+def test_export_real_node_first_cwe_wins_when_list():
+    graph = _real_finding_graph(severity="high", cwe=["CWE-78", "CWE-77"])
+    rule_id = export_findings_to_sarif(graph)["runs"][0]["results"][0]["ruleId"]
+    assert rule_id == "decepticon/CWE-78"
+
+
+def test_export_real_node_emits_file_and_line_locations():
+    graph = _real_finding_graph(severity="high", file="src/auth.py", line=42)
+    loc = export_findings_to_sarif(graph)["runs"][0]["results"][0]["locations"][0][
+        "physicalLocation"
+    ]
+    assert loc["artifactLocation"]["uri"] == "src/auth.py"
+    assert loc["region"]["startLine"] == 42
+
+
+def test_severity_threshold_breach_fires_on_real_high_finding():
+    graph = _real_finding_graph(severity="high", cwe=["CWE-89"], file="src/auth.py", line=42)
+    doc = export_findings_to_sarif(graph)
+    assert severity_threshold_breach(doc, fail_on="high")
+
+
+def test_severity_threshold_breach_fires_on_real_critical_finding():
+    graph = _real_finding_graph(severity="critical", cwe=["CWE-918"])
+    doc = export_findings_to_sarif(graph)
+    assert severity_threshold_breach(doc, fail_on="high")
