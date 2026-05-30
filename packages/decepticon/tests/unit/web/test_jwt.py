@@ -62,6 +62,26 @@ class TestParse:
         parsed = parse_token(t)
         assert any("jku" in f for f in parsed.findings)
 
+    def test_jku_https_attacker_host_flagged(self) -> None:
+        t = forge_token(
+            {"sub": "f"},
+            alg="HS256",
+            secret="k",
+            header={"jku": "https://attacker.com/jwks.json"},
+        )
+        parsed = parse_token(t)
+        assert any("jku" in f for f in parsed.findings)
+
+    def test_x5u_https_attacker_host_flagged(self) -> None:
+        t = forge_token(
+            {"sub": "f"},
+            alg="HS256",
+            secret="k",
+            header={"x5u": "https://attacker.com/cert.pem"},
+        )
+        parsed = parse_token(t)
+        assert any("x5u" in f for f in parsed.findings)
+
 
 class TestForgeVerify:
     @pytest.mark.parametrize("alg", ["HS256", "HS384", "HS512"])

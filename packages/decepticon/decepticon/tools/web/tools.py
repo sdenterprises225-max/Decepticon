@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
-from typing import Any
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Coroutine, TypeVar
 
 from langchain_core.tools import tool
 
@@ -22,6 +24,27 @@ from decepticon.tools.web.session import analyze_cookie
 
 def _json(data: Any) -> str:
     return json.dumps(data, indent=2, default=str, ensure_ascii=False)
+
+
+_T = TypeVar("_T")
+
+
+def _run_coro(coro: Coroutine[Any, Any, _T]) -> _T:
+    """Run ``coro`` to completion regardless of the calling context.
+
+    These sync ``@tool`` wrappers are invoked both from plain sync code
+    and from inside the agent's running event loop. ``asyncio.run`` is the
+    correct primitive but raises if a loop is already running, so when one
+    is detected the coroutine is driven on a fresh thread that owns its own
+    loop. On Python 3.13 ``get_event_loop().run_until_complete`` no longer
+    works in either context, hence this helper.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(lambda: asyncio.run(coro)).result()
 
 
 @tool
@@ -186,8 +209,6 @@ def http_request(
     Returns:
         JSON with status, headers, body (truncated), elapsed_ms, request_id
     """
-    import asyncio
-
     try:
         headers = json.loads(headers_json) if headers_json else {}
     except json.JSONDecodeError:
@@ -205,7 +226,7 @@ def http_request(
         return resp
 
     try:
-        resp = asyncio.get_event_loop().run_until_complete(_do())
+        resp = _run_coro(_do())
         return _json(
             {
                 "status": resp.status,

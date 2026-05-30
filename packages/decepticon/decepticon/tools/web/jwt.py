@@ -187,8 +187,10 @@ def parse_token(token: str) -> JWTToken:
         tok.findings.append("alg=HS256 with jku header — key confusion candidate")
     if header.kid and ("../" in header.kid or "%2f" in header.kid.lower()):
         tok.findings.append("kid contains path traversal — file read / SQLi candidate")
-    if header.jku and not header.jku.startswith("https://"):
-        tok.findings.append("jku over non-HTTPS or attacker-controlled host — key confusion")
+    if header.jku:
+        tok.findings.append("jku points at an attacker-influenced host — key confusion")
+    if header.x5u:
+        tok.findings.append("x5u points at an attacker-influenced host — key confusion")
     if claims.expired:
         tok.findings.append("token already expired — test whether server enforces exp")
     if claims.exp is None:
