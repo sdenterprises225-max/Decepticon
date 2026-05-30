@@ -32,7 +32,6 @@ print("[+] Functions: {{}}".format(fm.getFunctionCount()))
 for f in fm.getFunctions(True):
     name = f.getName()
     if not f.isThunk() and f.isExternal() is False:
-        addrs = [str(a) for a in f.getEntryPoint()]
         print("fn {{}} @ {{}}".format(name, f.getEntryPoint()))
 
 # Dump external imports (likely interesting APIs)
