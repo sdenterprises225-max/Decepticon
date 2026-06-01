@@ -115,6 +115,21 @@ def _make_engagement_context(**_: Any):
     return EngagementContextMiddleware()
 
 
+def _make_m4_lifecycle(**_: Any):
+    """Conditional slot — returns None when DECEPTICON_M4_ENABLED is falsy.
+
+    build_middleware filters None results out so the absent M4 flag
+    simply skips the slot, preserving Phase 1 (shared neo4j user)
+    behaviour when M4 is not opted in.
+    """
+    import os
+    _FALSY = frozenset({"", "0", "false", "no", "off"})
+    if os.environ.get("DECEPTICON_M4_ENABLED", "").strip().lower() in _FALSY:
+        return None
+    from decepticon.middleware.m4_lifecycle import M4LifecycleMiddleware
+    return M4LifecycleMiddleware()
+
+
 def _make_roe_enforcement(*, role: str, **_: Any):
     """Build the RoE enforcement middleware with a per-engagement sink.
 
@@ -251,6 +266,7 @@ SlotFactory = Callable[..., Any]
 
 DEFAULT_SLOT_FACTORIES: dict[MiddlewareSlot, SlotFactory] = {
     MiddlewareSlot.ENGAGEMENT_CONTEXT: _make_engagement_context,
+    MiddlewareSlot.M4_LIFECYCLE: _make_m4_lifecycle,
     MiddlewareSlot.ROE_ENFORCEMENT: _make_roe_enforcement,
     MiddlewareSlot.HITL_APPROVAL: _make_hitl,
     MiddlewareSlot.UNTRUSTED_OUTPUT: _make_untrusted_output,
