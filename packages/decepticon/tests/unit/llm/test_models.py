@@ -218,6 +218,69 @@ class TestResolveChain:
         ]
 
 
+# ── OpenAI-compatible gateways / aggregators (oh-my-pi parity) ──────────
+
+
+class TestGatewayChains:
+    """The gateway AuthMethods have fixed catalogs (no env-driven model),
+    so resolve_chain just reads METHOD_MODELS. Every tier must resolve to
+    a gateway-prefixed alias so routes never collide across gateways."""
+
+    GATEWAYS = (
+        AuthMethod.OPENCODE_API,
+        AuthMethod.VERCEL_GATEWAY_API,
+        AuthMethod.HUGGINGFACE_API,
+        AuthMethod.VENICE_API,
+        AuthMethod.NANOGPT_API,
+        AuthMethod.SYNTHETIC_API,
+        AuthMethod.ZENMUX_API,
+        AuthMethod.QIANFAN_API,
+        AuthMethod.CLOUDFLARE_GATEWAY_API,
+    )
+
+    def test_opencode_high_resolves_to_prefixed_alias(self):
+        creds = Credentials(methods=[AuthMethod.OPENCODE_API])
+        assert resolve_chain(Tier.HIGH, creds) == ["opencode/claude-opus-4-6"]
+
+    def test_every_gateway_has_all_three_tiers(self):
+        # Unlike MiniMax/Mistral (no LOW), the gateways expose HIGH/MID/LOW,
+        # so a single-gateway inventory yields a non-empty chain at every tier.
+        for method in self.GATEWAYS:
+            creds = Credentials(methods=[method])
+            for tier in (Tier.HIGH, Tier.MID, Tier.LOW):
+                chain = resolve_chain(tier, creds)
+                assert len(chain) == 1, (method, tier)
+                assert "/" in chain[0]
+
+    def test_gateway_aliases_keep_gateway_prefix(self):
+        # The leading prefix of each alias must match the gateway's own
+        # routing prefix (opencode/, vercel/, hf/, …) — the property that
+        # keeps two gateways sharing an upstream slug from colliding.
+        expected_prefix = {
+            AuthMethod.OPENCODE_API: "opencode/",
+            AuthMethod.VERCEL_GATEWAY_API: "vercel/",
+            AuthMethod.HUGGINGFACE_API: "hf/",
+            AuthMethod.VENICE_API: "venice/",
+            AuthMethod.NANOGPT_API: "nanogpt/",
+            AuthMethod.SYNTHETIC_API: "synthetic/",
+            AuthMethod.ZENMUX_API: "zenmux/",
+            AuthMethod.QIANFAN_API: "qianfan/",
+            AuthMethod.CLOUDFLARE_GATEWAY_API: "cfgateway/",
+        }
+        for method, prefix in expected_prefix.items():
+            creds = Credentials(methods=[method])
+            chain = resolve_chain(Tier.HIGH, creds)
+            assert chain[0].startswith(prefix), (method, chain)
+
+    def test_gateway_falls_back_to_next_method(self):
+        # A gateway primary with a vendor-API fallback resolves both, in order.
+        creds = Credentials(methods=[AuthMethod.OPENCODE_API, AuthMethod.OPENAI_API])
+        assert resolve_chain(Tier.HIGH, creds) == [
+            "opencode/claude-opus-4-6",
+            "openai/gpt-5.5",
+        ]
+
+
 # ── OLLAMA_LOCAL dynamic resolution (issue #106) ────────────────────────
 
 

@@ -77,6 +77,34 @@ PROVIDER_API_KEY_ENV: dict[str, str] = {
     "xiaomi_mimo": "XIAOMI_MIMO_API_KEY",
 }
 
+# OpenAI-compatible gateways / aggregators with no native LiteLLM provider
+# (oh-my-pi parity). Each is reached through LiteLLM's ``openai/`` provider
+# with an explicit api_base override — identical to the xiaomi_mimo / custom
+# path but table-driven so a batch of gateways shares one code path. The
+# model alias keeps the gateway prefix (``opencode/claude-opus-4-6``) so two
+# gateways exposing the same upstream slug never collide in the model_list;
+# ``build_model_entry`` rewrites the prefix to ``openai/`` and pins the base.
+#
+# Mapping: provider_prefix -> (api_base, api_key_env). ``api_base`` is a
+# literal URL for fixed-endpoint gateways, or an ``os.environ/<NAME>`` ref
+# for per-account gateways (Cloudflare) whose URL the operator supplies.
+# ``api_key_env`` is the env var holding the bearer token.
+OPENAI_COMPAT_GATEWAYS: dict[str, tuple[str, str]] = {
+    "opencode": ("https://opencode.ai/zen/v1", "OPENCODE_API_KEY"),
+    "vercel": ("https://ai-gateway.vercel.sh/v1", "VERCEL_AI_GATEWAY_API_KEY"),
+    "hf": ("https://router.huggingface.co/v1", "HF_TOKEN"),
+    "venice": ("https://api.venice.ai/api/v1", "VENICE_API_KEY"),
+    "nanogpt": ("https://nano-gpt.com/api/v1", "NANOGPT_API_KEY"),
+    "synthetic": ("https://api.synthetic.new/openai/v1", "SYNTHETIC_API_KEY"),
+    "zenmux": ("https://zenmux.ai/api/v1", "ZENMUX_API_KEY"),
+    "qianfan": ("https://qianfan.baidubce.com/v2", "QIANFAN_API_KEY"),
+    # Per-account base URL: the operator sets it to their Cloudflare AI
+    # Gateway OpenAI-compat endpoint (``…/compat``). Resolved by LiteLLM at
+    # request time, so an unset base only fails the call (with a clear 404),
+    # never proxy startup.
+    "cfgateway": ("os.environ/CLOUDFLARE_AI_GATEWAY_API_BASE", "CLOUDFLARE_AI_GATEWAY_API_KEY"),
+}
+
 ALLOWED_DYNAMIC_PROVIDERS = frozenset(
     {
         *PROVIDER_API_KEY_ENV,
@@ -105,6 +133,12 @@ ALLOWED_DYNAMIC_PROVIDERS = frozenset(
 # directly. Keep a defensive alias entry — the spread above only covers
 # what's in PROVIDER_API_KEY_ENV with the same casing.
 ALLOWED_DYNAMIC_PROVIDERS = frozenset(ALLOWED_DYNAMIC_PROVIDERS | {"vertex_ai"})
+# OpenAI-compatible gateway prefixes (opencode, vercel, hf, …) are not in
+# PROVIDER_API_KEY_ENV — their api_base + key come from OPENAI_COMPAT_GATEWAYS
+# and build_model_entry rewrites them to ``openai/`` — so register them
+# explicitly or validate_model_name would reject the alias as an unknown
+# provider before the gateway branch runs.
+ALLOWED_DYNAMIC_PROVIDERS = frozenset(ALLOWED_DYNAMIC_PROVIDERS | set(OPENAI_COMPAT_GATEWAYS))
 
 # Environment variables that are model-selection controls, not model names.
 _MODEL_CONTROL_SUFFIXES = (
@@ -328,6 +362,23 @@ def build_model_entry(model_name: str) -> dict[str, Any]:
             "model": f"openai/{actual_model}",
             "api_key": "os.environ/XIAOMI_MIMO_API_KEY",
             "api_base": "os.environ/XIAOMI_MIMO_API_BASE",
+        }
+    elif provider in OPENAI_COMPAT_GATEWAYS:
+        # OpenAI-compatible gateway / aggregator (OpenCode Zen, Vercel AI
+        # Gateway, Hugging Face Router, Venice, NanoGPT, Synthetic, ZenMux,
+        # Kimi-for-Coding, Qianfan, Cloudflare AI Gateway). Strip the gateway
+        # prefix from the alias, remap to ``openai/<slug>``, and pin the
+        # gateway's base URL + bearer key. The slug may itself contain
+        # slashes (``vercel/anthropic/claude-opus-4.6`` →
+        # ``openai/anthropic/claude-opus-4.6``) — LiteLLM forwards everything
+        # after ``openai/`` to the endpoint verbatim, which is exactly what
+        # the gateway's ``creator/model`` ids expect.
+        api_base, api_key_env = OPENAI_COMPAT_GATEWAYS[provider]
+        actual_model = model_name.split("/", 1)[1]
+        params = {
+            "model": f"openai/{actual_model}",
+            "api_key": f"os.environ/{api_key_env}",
+            "api_base": api_base,
         }
     else:
         params = {"model": model_name}

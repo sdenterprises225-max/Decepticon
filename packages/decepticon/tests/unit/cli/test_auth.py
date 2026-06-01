@@ -64,6 +64,19 @@ def test_inventory_api_key_active(clean_env):
     assert inv.any_active
 
 
+def test_gateway_key_activates_method(clean_env):
+    # An OpenAI-compatible gateway key (oh-my-pi parity) is detected and
+    # routed exactly like any first-party API key — it is in the default
+    # priority, so a lone OpenCode key produces an active chain.
+    clean_env.setenv("OPENCODE_API_KEY", "sk-" + "o" * 40)
+    inv = factory.auth_inventory()
+    opencode = next(s for s in inv.statuses if s.method == AuthMethod.OPENCODE_API)
+    assert opencode.configured
+    assert opencode.active
+    assert opencode.kind == "api"
+    assert AuthMethod.OPENCODE_API in inv.resolved_chain
+
+
 def test_placeholder_key_is_not_configured(clean_env):
     clean_env.setenv("ANTHROPIC_API_KEY", "your-anthropic-key-here")
     inv = factory.auth_inventory()

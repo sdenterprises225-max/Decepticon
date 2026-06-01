@@ -138,6 +138,19 @@ _DEFAULT_AUTH_PRIORITY: tuple[AuthMethod, ...] = (
     AuthMethod.CUSTOM_OPENAI_API,
     AuthMethod.CEREBRAS_API,
     AuthMethod.XIAOMI_MIMO_API,
+    # OpenAI-compatible gateways / aggregators (oh-my-pi parity). Placed
+    # after the first-party API providers and before the local endpoints:
+    # a hosted gateway is a reasonable fallback but shouldn't preempt a
+    # direct vendor key the user also configured.
+    AuthMethod.OPENCODE_API,
+    AuthMethod.VERCEL_GATEWAY_API,
+    AuthMethod.ZENMUX_API,
+    AuthMethod.NANOGPT_API,
+    AuthMethod.VENICE_API,
+    AuthMethod.SYNTHETIC_API,
+    AuthMethod.HUGGINGFACE_API,
+    AuthMethod.QIANFAN_API,
+    AuthMethod.CLOUDFLARE_GATEWAY_API,
     AuthMethod.OLLAMA_LOCAL,
     AuthMethod.OLLAMA_CLOUD,
 )
@@ -175,6 +188,20 @@ _API_METHOD_ENV: dict[AuthMethod, str] = {
     AuthMethod.AZURE_API: "AZURE_API_KEY",
     AuthMethod.CEREBRAS_API: "CEREBRAS_API_KEY",
     AuthMethod.XIAOMI_MIMO_API: "XIAOMI_MIMO_API_KEY",
+    # OpenAI-compatible gateways / aggregators (oh-my-pi parity). Each is
+    # detected by the presence of a non-placeholder bearer key. The base
+    # URL is fixed per gateway (see config/litellm.yaml) except Cloudflare,
+    # whose per-account CLOUDFLARE_AI_GATEWAY_API_BASE must also be set —
+    # documented in .env.example; a key without the base 404s at call time.
+    AuthMethod.OPENCODE_API: "OPENCODE_API_KEY",
+    AuthMethod.VERCEL_GATEWAY_API: "VERCEL_AI_GATEWAY_API_KEY",
+    AuthMethod.HUGGINGFACE_API: "HF_TOKEN",
+    AuthMethod.VENICE_API: "VENICE_API_KEY",
+    AuthMethod.NANOGPT_API: "NANOGPT_API_KEY",
+    AuthMethod.SYNTHETIC_API: "SYNTHETIC_API_KEY",
+    AuthMethod.ZENMUX_API: "ZENMUX_API_KEY",
+    AuthMethod.QIANFAN_API: "QIANFAN_API_KEY",
+    AuthMethod.CLOUDFLARE_GATEWAY_API: "CLOUDFLARE_AI_GATEWAY_API_KEY",
 }
 
 _OAUTH_METHOD_ENV: dict[AuthMethod, str] = {
@@ -618,6 +645,15 @@ _METHOD_LABEL: dict[AuthMethod, str] = {
     AuthMethod.AZURE_API: "Azure OpenAI — API key",
     AuthMethod.CEREBRAS_API: "Cerebras — API key",
     AuthMethod.XIAOMI_MIMO_API: "Xiaomi MiMo — API key",
+    AuthMethod.OPENCODE_API: "OpenCode Zen — API key",
+    AuthMethod.VERCEL_GATEWAY_API: "Vercel AI Gateway — API key",
+    AuthMethod.HUGGINGFACE_API: "Hugging Face Router — token",
+    AuthMethod.VENICE_API: "Venice AI — API key",
+    AuthMethod.NANOGPT_API: "NanoGPT — API key",
+    AuthMethod.SYNTHETIC_API: "Synthetic — API key",
+    AuthMethod.ZENMUX_API: "ZenMux — API key",
+    AuthMethod.QIANFAN_API: "Baidu Qianfan (ERNIE) — API key",
+    AuthMethod.CLOUDFLARE_GATEWAY_API: "Cloudflare AI Gateway — API key + base URL",
     AuthMethod.COPILOT_OAUTH: "GitHub Copilot — Pro subscription",
     AuthMethod.GROK_OAUTH: "xAI SuperGrok — X Premium+",
     AuthMethod.PERPLEXITY_OAUTH: "Perplexity — Pro subscription",

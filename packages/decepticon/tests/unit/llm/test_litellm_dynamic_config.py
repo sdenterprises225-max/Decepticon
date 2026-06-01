@@ -18,6 +18,8 @@ collect_requested_models = _module.collect_requested_models
 build_model_entry = _module.build_model_entry
 merge_dynamic_models = _module.merge_dynamic_models
 validate_model_name = _module.validate_model_name
+OPENAI_COMPAT_GATEWAYS = _module.OPENAI_COMPAT_GATEWAYS
+ALLOWED_DYNAMIC_PROVIDERS = _module.ALLOWED_DYNAMIC_PROVIDERS
 
 
 def test_collect_requested_models_includes_global_and_role_overrides() -> None:
@@ -288,3 +290,87 @@ def test_validate_model_name_rejects_llamacpp_without_model_slug() -> None:
     """
     with pytest.raises(ValueError, match="provider/model"):
         validate_model_name("llamacpp")
+
+
+# ── OpenAI-compatible gateways / aggregators (oh-my-pi parity) ──────────
+
+
+def test_every_gateway_prefix_is_an_allowed_dynamic_provider() -> None:
+    """Each OPENAI_COMPAT_GATEWAYS prefix must be in ALLOWED_DYNAMIC_PROVIDERS
+    or validate_model_name would reject the alias before build_model_entry's
+    gateway branch runs.
+    """
+    for prefix in OPENAI_COMPAT_GATEWAYS:
+        assert prefix in ALLOWED_DYNAMIC_PROVIDERS, prefix
+
+
+def test_build_model_entry_routes_gateway_to_openai_with_api_base() -> None:
+    """A gateway alias is rewritten to ``openai/<slug>`` + the gateway's
+    fixed base URL and bearer key, mirroring the xiaomi_mimo / custom path.
+    """
+    entry = build_model_entry("opencode/claude-opus-4-6")
+
+    assert entry["model_name"] == "opencode/claude-opus-4-6", (
+        "model_name must stay the agent-facing alias unchanged — per-role "
+        "DECEPTICON_MODEL_<ROLE> overrides depend on this passthrough"
+    )
+    assert entry["litellm_params"] == {
+        "model": "openai/claude-opus-4-6",
+        "api_key": "os.environ/OPENCODE_API_KEY",
+        "api_base": "https://opencode.ai/zen/v1",
+    }
+
+
+def test_build_model_entry_gateway_preserves_multi_slash_slug() -> None:
+    """Gateways whose ids embed slashes (``creator/model``) keep the full
+    slug after ``openai/`` so the gateway receives the id it expects.
+    """
+    entry = build_model_entry("vercel/anthropic/claude-opus-4.6")
+
+    assert entry["litellm_params"] == {
+        "model": "openai/anthropic/claude-opus-4.6",
+        "api_key": "os.environ/VERCEL_AI_GATEWAY_API_KEY",
+        "api_base": "https://ai-gateway.vercel.sh/v1",
+    }
+
+
+def test_build_model_entry_gateway_preserves_hf_colon_slug() -> None:
+    """Synthetic's ``hf:`` slug prefix survives the openai/ rewrite."""
+    entry = build_model_entry("synthetic/hf:openai/gpt-oss-120b")
+
+    assert entry["litellm_params"]["model"] == "openai/hf:openai/gpt-oss-120b"
+    assert entry["litellm_params"]["api_base"] == "https://api.synthetic.new/openai/v1"
+    assert entry["litellm_params"]["api_key"] == "os.environ/SYNTHETIC_API_KEY"
+
+
+def test_build_model_entry_cloudflare_uses_env_base_url() -> None:
+    """Cloudflare AI Gateway is per-account, so its api_base is an
+    ``os.environ`` ref the operator supplies — not a literal URL.
+    """
+    entry = build_model_entry("cfgateway/anthropic/claude-opus-4-6")
+
+    assert entry["litellm_params"] == {
+        "model": "openai/anthropic/claude-opus-4-6",
+        "api_key": "os.environ/CLOUDFLARE_AI_GATEWAY_API_KEY",
+        "api_base": "os.environ/CLOUDFLARE_AI_GATEWAY_API_BASE",
+    }
+
+
+def test_validate_model_name_accepts_every_gateway_prefix() -> None:
+    """Every gateway prefix must validate with a model slug attached."""
+    for prefix in OPENAI_COMPAT_GATEWAYS:
+        validate_model_name(f"{prefix}/some-model")  # must not raise
+
+
+def test_merge_dynamic_models_registers_gateway_override() -> None:
+    """A per-role gateway override flows through merge → build_model_entry."""
+    merged = merge_dynamic_models(
+        {"model_list": [], "litellm_settings": {"fallbacks": []}},
+        {"DECEPTICON_MODEL_PATCHER": "zenmux/anthropic/claude-opus-4.6"},
+    )
+    entries = {e["model_name"]: e["litellm_params"] for e in merged["model_list"]}
+    assert entries["zenmux/anthropic/claude-opus-4.6"] == {
+        "model": "openai/anthropic/claude-opus-4.6",
+        "api_key": "os.environ/ZENMUX_API_KEY",
+        "api_base": "https://zenmux.ai/api/v1",
+    }

@@ -306,6 +306,29 @@ OPENAI_API_KEY=sk-proj-...
 | LM Studio (local) | `LMSTUDIO_API_BASE` + `LMSTUDIO_MODEL` (server on port 1234) |
 | Custom gateway | `CUSTOM_OPENAI_API_KEY`, `CUSTOM_OPENAI_API_BASE`, `CUSTOM_OPENAI_MODEL` |
 
+**OpenAI-compatible gateways / aggregators:**
+
+Each routes through LiteLLM's `openai/` provider with a fixed base URL
+(no extra config beyond the key). Set the key and the gateway joins the
+default fallback chain; pick a specific route at runtime with `/model`
+(e.g. `/model opencode/claude-opus-4-6`).
+
+| Provider | Env Var | Console |
+|----------|---------|---------|
+| OpenCode Zen | `OPENCODE_API_KEY` | [opencode.ai/docs/zen](https://opencode.ai/docs/zen/) |
+| Vercel AI Gateway | `VERCEL_AI_GATEWAY_API_KEY` | [vercel.com/docs/ai-gateway](https://vercel.com/docs/ai-gateway) |
+| Hugging Face Router | `HF_TOKEN` | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
+| Venice AI | `VENICE_API_KEY` | [venice.ai/settings/api](https://venice.ai/settings/api) |
+| NanoGPT | `NANOGPT_API_KEY` | [nano-gpt.com](https://nano-gpt.com) |
+| Synthetic | `SYNTHETIC_API_KEY` | [synthetic.new](https://synthetic.new) |
+| ZenMux | `ZENMUX_API_KEY` | [zenmux.ai](https://zenmux.ai) |
+| Baidu Qianfan (ERNIE) | `QIANFAN_API_KEY` | [console.bce.baidu.com/qianfan](https://console.bce.baidu.com/qianfan) |
+| Cloudflare AI Gateway | `CLOUDFLARE_AI_GATEWAY_API_KEY` + `CLOUDFLARE_AI_GATEWAY_API_BASE` | [dash.cloudflare.com](https://dash.cloudflare.com) |
+
+> Cloudflare's base URL is per-account — set it to your gateway's
+> OpenAI-compat `…/compat` path. Qianfan model ids drift; override per
+> role with `DECEPTICON_MODEL_<ROLE>` if a default 404s.
+
 ---
 
 ### Local LLM (Ollama)

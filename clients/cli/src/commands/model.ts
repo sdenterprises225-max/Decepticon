@@ -126,6 +126,53 @@ const SUPPORTED_MODELS: Record<string, string[]> = {
     "dashscope/qwen-turbo",
   ],
   "GitHub Models": ["github/gpt-5.5", "github/gpt-5.4", "github/gpt-5-nano"],
+  // OpenAI-compatible gateways / aggregators (oh-my-pi parity).
+  // Routed via openai/ + api_base override; alias keeps the gateway prefix.
+  "OpenCode Zen": [
+    "opencode/claude-opus-4-6",
+    "opencode/gpt-5.4",
+    "opencode/glm-5-free",
+  ],
+  "Vercel AI Gateway": [
+    "vercel/anthropic/claude-opus-4.6",
+    "vercel/anthropic/claude-sonnet-4.6",
+    "vercel/anthropic/claude-haiku-4.5",
+  ],
+  "Hugging Face Router": [
+    "hf/deepseek-ai/DeepSeek-V3.1",
+    "hf/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+    "hf/openai/gpt-oss-120b",
+  ],
+  "Venice AI": [
+    "venice/claude-opus-4-6",
+    "venice/claude-sonnet-4-6",
+    "venice/deepseek-v4-flash",
+  ],
+  "NanoGPT": [
+    "nanogpt/anthropic/claude-opus-4.6",
+    "nanogpt/anthropic/claude-sonnet-4.6",
+    "nanogpt/anthropic/claude-3-5-haiku-20241022",
+  ],
+  "Synthetic": [
+    "synthetic/hf:deepseek-ai/DeepSeek-V3.2",
+    "synthetic/hf:meta-llama/Llama-3.3-70B-Instruct",
+    "synthetic/hf:openai/gpt-oss-120b",
+  ],
+  "ZenMux": [
+    "zenmux/anthropic/claude-opus-4.6",
+    "zenmux/anthropic/claude-sonnet-4.6",
+    "zenmux/anthropic/claude-haiku-4.5",
+  ],
+  "Baidu Qianfan (ERNIE)": [
+    "qianfan/ernie-4.5-turbo-128k",
+    "qianfan/ernie-4.5-turbo-32k",
+    "qianfan/ernie-speed-pro-128k",
+  ],
+  "Cloudflare AI Gateway": [
+    "cfgateway/anthropic/claude-opus-4-6",
+    "cfgateway/anthropic/claude-sonnet-4-6",
+    "cfgateway/anthropic/claude-haiku-4-5",
+  ],
   // Local
   "Ollama (local)": ["ollama_chat/qwen3-coder:30b (or your OLLAMA_MODEL)"],
   "Ollama Cloud": ["ollama_chat/<your OLLAMA_CLOUD_MODEL>"],

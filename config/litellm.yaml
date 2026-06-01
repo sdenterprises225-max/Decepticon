@@ -392,6 +392,254 @@ model_list:
       input_cost_per_token: 0
       output_cost_per_token: 0
 
+  # ── OpenAI-compatible gateways / aggregators (oh-my-pi parity) ─────────
+  # None ship a native LiteLLM provider, so each is registered through the
+  # ``openai/`` provider with an explicit api_base override (mirrors the
+  # Xiaomi MiMo block above). The user-facing model_name keeps the gateway
+  # prefix so two gateways exposing the same upstream slug never collide.
+  # These mirror config/litellm_dynamic_config.OPENAI_COMPAT_GATEWAYS and
+  # decepticon_core.types.llm.METHOD_MODELS. Per-1M USD costs come from the
+  # gateway's published rate card; subscription / flat-plan / region-priced
+  # gateways are pinned to $0 (honest — not per-token billed).
+
+  # OpenCode Zen — https://opencode.ai/zen/v1
+  - model_name: opencode/claude-opus-4-6
+    litellm_params:
+      model: openai/claude-opus-4-6
+      api_base: https://opencode.ai/zen/v1
+      api_key: os.environ/OPENCODE_API_KEY
+    model_info:
+      input_cost_per_token: 0.000005
+      output_cost_per_token: 0.000025
+  - model_name: opencode/gpt-5.4
+    litellm_params:
+      model: openai/gpt-5.4
+      api_base: https://opencode.ai/zen/v1
+      api_key: os.environ/OPENCODE_API_KEY
+    model_info:
+      input_cost_per_token: 0.0000025
+      output_cost_per_token: 0.000015
+  - model_name: opencode/glm-5-free
+    litellm_params:
+      model: openai/glm-5-free
+      api_base: https://opencode.ai/zen/v1
+      api_key: os.environ/OPENCODE_API_KEY
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+
+  # Vercel AI Gateway — https://ai-gateway.vercel.sh/v1
+  - model_name: vercel/anthropic/claude-opus-4.6
+    litellm_params:
+      model: openai/anthropic/claude-opus-4.6
+      api_base: https://ai-gateway.vercel.sh/v1
+      api_key: os.environ/VERCEL_AI_GATEWAY_API_KEY
+    model_info:
+      input_cost_per_token: 0.000005
+      output_cost_per_token: 0.000025
+  - model_name: vercel/anthropic/claude-sonnet-4.6
+    litellm_params:
+      model: openai/anthropic/claude-sonnet-4.6
+      api_base: https://ai-gateway.vercel.sh/v1
+      api_key: os.environ/VERCEL_AI_GATEWAY_API_KEY
+    model_info:
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
+  - model_name: vercel/anthropic/claude-haiku-4.5
+    litellm_params:
+      model: openai/anthropic/claude-haiku-4.5
+      api_base: https://ai-gateway.vercel.sh/v1
+      api_key: os.environ/VERCEL_AI_GATEWAY_API_KEY
+    model_info:
+      input_cost_per_token: 0.000001
+      output_cost_per_token: 0.000005
+
+  # Hugging Face Router — https://router.huggingface.co/v1 (HF_TOKEN)
+  - model_name: hf/deepseek-ai/DeepSeek-V3.1
+    litellm_params:
+      model: openai/deepseek-ai/DeepSeek-V3.1
+      api_base: https://router.huggingface.co/v1
+      api_key: os.environ/HF_TOKEN
+    model_info:
+      input_cost_per_token: 0.0000006
+      output_cost_per_token: 0.00000125
+  - model_name: hf/meta-llama/Llama-3.3-70B-Instruct-Turbo
+    litellm_params:
+      model: openai/meta-llama/Llama-3.3-70B-Instruct-Turbo
+      api_base: https://router.huggingface.co/v1
+      api_key: os.environ/HF_TOKEN
+    model_info:
+      input_cost_per_token: 0.00000088
+      output_cost_per_token: 0.00000088
+  - model_name: hf/openai/gpt-oss-120b
+    litellm_params:
+      model: openai/openai/gpt-oss-120b
+      api_base: https://router.huggingface.co/v1
+      api_key: os.environ/HF_TOKEN
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+
+  # Venice AI — https://api.venice.ai/api/v1 (subscription/credits → $0)
+  - model_name: venice/claude-opus-4-6
+    litellm_params:
+      model: openai/claude-opus-4-6
+      api_base: https://api.venice.ai/api/v1
+      api_key: os.environ/VENICE_API_KEY
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+  - model_name: venice/claude-sonnet-4-6
+    litellm_params:
+      model: openai/claude-sonnet-4-6
+      api_base: https://api.venice.ai/api/v1
+      api_key: os.environ/VENICE_API_KEY
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+  - model_name: venice/deepseek-v4-flash
+    litellm_params:
+      model: openai/deepseek-v4-flash
+      api_base: https://api.venice.ai/api/v1
+      api_key: os.environ/VENICE_API_KEY
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+
+  # NanoGPT — https://nano-gpt.com/api/v1
+  - model_name: nanogpt/anthropic/claude-opus-4.6
+    litellm_params:
+      model: openai/anthropic/claude-opus-4.6
+      api_base: https://nano-gpt.com/api/v1
+      api_key: os.environ/NANOGPT_API_KEY
+    model_info:
+      input_cost_per_token: 0.000005
+      output_cost_per_token: 0.000025
+  - model_name: nanogpt/anthropic/claude-sonnet-4.6
+    litellm_params:
+      model: openai/anthropic/claude-sonnet-4.6
+      api_base: https://nano-gpt.com/api/v1
+      api_key: os.environ/NANOGPT_API_KEY
+    model_info:
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
+  - model_name: nanogpt/anthropic/claude-3-5-haiku-20241022
+    litellm_params:
+      model: openai/anthropic/claude-3-5-haiku-20241022
+      api_base: https://nano-gpt.com/api/v1
+      api_key: os.environ/NANOGPT_API_KEY
+    model_info:
+      input_cost_per_token: 0.0000008
+      output_cost_per_token: 0.000004
+
+  # Synthetic — https://api.synthetic.new/openai/v1 (flat plan → $0)
+  - model_name: synthetic/hf:deepseek-ai/DeepSeek-V3.2
+    litellm_params:
+      model: openai/hf:deepseek-ai/DeepSeek-V3.2
+      api_base: https://api.synthetic.new/openai/v1
+      api_key: os.environ/SYNTHETIC_API_KEY
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+  - model_name: synthetic/hf:meta-llama/Llama-3.3-70B-Instruct
+    litellm_params:
+      model: openai/hf:meta-llama/Llama-3.3-70B-Instruct
+      api_base: https://api.synthetic.new/openai/v1
+      api_key: os.environ/SYNTHETIC_API_KEY
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+  - model_name: synthetic/hf:openai/gpt-oss-120b
+    litellm_params:
+      model: openai/hf:openai/gpt-oss-120b
+      api_base: https://api.synthetic.new/openai/v1
+      api_key: os.environ/SYNTHETIC_API_KEY
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+
+  # ZenMux — https://zenmux.ai/api/v1
+  - model_name: zenmux/anthropic/claude-opus-4.6
+    litellm_params:
+      model: openai/anthropic/claude-opus-4.6
+      api_base: https://zenmux.ai/api/v1
+      api_key: os.environ/ZENMUX_API_KEY
+    model_info:
+      input_cost_per_token: 0.000005
+      output_cost_per_token: 0.000025
+  - model_name: zenmux/anthropic/claude-sonnet-4.6
+    litellm_params:
+      model: openai/anthropic/claude-sonnet-4.6
+      api_base: https://zenmux.ai/api/v1
+      api_key: os.environ/ZENMUX_API_KEY
+    model_info:
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
+  - model_name: zenmux/anthropic/claude-haiku-4.5
+    litellm_params:
+      model: openai/anthropic/claude-haiku-4.5
+      api_base: https://zenmux.ai/api/v1
+      api_key: os.environ/ZENMUX_API_KEY
+    model_info:
+      input_cost_per_token: 0.000001
+      output_cost_per_token: 0.000005
+
+  # Baidu Qianfan v2 — https://qianfan.baidubce.com/v2 (region-priced → $0)
+  - model_name: qianfan/ernie-4.5-turbo-128k
+    litellm_params:
+      model: openai/ernie-4.5-turbo-128k
+      api_base: https://qianfan.baidubce.com/v2
+      api_key: os.environ/QIANFAN_API_KEY
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+  - model_name: qianfan/ernie-4.5-turbo-32k
+    litellm_params:
+      model: openai/ernie-4.5-turbo-32k
+      api_base: https://qianfan.baidubce.com/v2
+      api_key: os.environ/QIANFAN_API_KEY
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+  - model_name: qianfan/ernie-speed-pro-128k
+    litellm_params:
+      model: openai/ernie-speed-pro-128k
+      api_base: https://qianfan.baidubce.com/v2
+      api_key: os.environ/QIANFAN_API_KEY
+    model_info:
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+
+  # Cloudflare AI Gateway — per-account base URL via
+  # CLOUDFLARE_AI_GATEWAY_API_BASE. Point it at the OpenAI-compat
+  # ``…/compat`` path; that path is Cloudflare-deprecated (still works for
+  # existing integrations) — the newer REST endpoint
+  # ``…/accounts/<id>/ai/v1`` is an alternative the operator can use instead.
+  - model_name: cfgateway/anthropic/claude-opus-4-6
+    litellm_params:
+      model: openai/anthropic/claude-opus-4-6
+      api_base: os.environ/CLOUDFLARE_AI_GATEWAY_API_BASE
+      api_key: os.environ/CLOUDFLARE_AI_GATEWAY_API_KEY
+    model_info:
+      input_cost_per_token: 0.000005
+      output_cost_per_token: 0.000025
+  - model_name: cfgateway/anthropic/claude-sonnet-4-6
+    litellm_params:
+      model: openai/anthropic/claude-sonnet-4-6
+      api_base: os.environ/CLOUDFLARE_AI_GATEWAY_API_BASE
+      api_key: os.environ/CLOUDFLARE_AI_GATEWAY_API_KEY
+    model_info:
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
+  - model_name: cfgateway/anthropic/claude-haiku-4-5
+    litellm_params:
+      model: openai/anthropic/claude-haiku-4-5
+      api_base: os.environ/CLOUDFLARE_AI_GATEWAY_API_BASE
+      api_key: os.environ/CLOUDFLARE_AI_GATEWAY_API_KEY
+    model_info:
+      input_cost_per_token: 0.000001
+      output_cost_per_token: 0.000005
+
   # ── Subscription OAuth routes ──────────────────────────────────────────
   # ChatGPT (auth/gpt-*), Gemini Advanced (gemini-sub/*), Copilot
   # (copilot/*), SuperGrok (grok-sub/*), and Perplexity Pro (pplx-sub/*)
@@ -482,6 +730,27 @@ litellm_settings:
     # Xiaomi MiMo — routed via openai/ provider with api_base override
     - {"openai/mimo-vl": ["openai/mimo-rl"]}
     - {"openai/mimo-rl": ["openai/mimo-7b"]}
+    # OpenAI-compatible gateways (oh-my-pi parity) — HIGH → MID → LOW
+    # within each gateway so a primary failure degrades on the same key
+    # before ModelFallbackMiddleware crosses to another provider.
+    - {"opencode/claude-opus-4-6": ["opencode/gpt-5.4"]}
+    - {"opencode/gpt-5.4": ["opencode/glm-5-free"]}
+    - {"vercel/anthropic/claude-opus-4.6": ["vercel/anthropic/claude-sonnet-4.6"]}
+    - {"vercel/anthropic/claude-sonnet-4.6": ["vercel/anthropic/claude-haiku-4.5"]}
+    - {"hf/deepseek-ai/DeepSeek-V3.1": ["hf/meta-llama/Llama-3.3-70B-Instruct-Turbo"]}
+    - {"hf/meta-llama/Llama-3.3-70B-Instruct-Turbo": ["hf/openai/gpt-oss-120b"]}
+    - {"venice/claude-opus-4-6": ["venice/claude-sonnet-4-6"]}
+    - {"venice/claude-sonnet-4-6": ["venice/deepseek-v4-flash"]}
+    - {"nanogpt/anthropic/claude-opus-4.6": ["nanogpt/anthropic/claude-sonnet-4.6"]}
+    - {"nanogpt/anthropic/claude-sonnet-4.6": ["nanogpt/anthropic/claude-3-5-haiku-20241022"]}
+    - {"synthetic/hf:deepseek-ai/DeepSeek-V3.2": ["synthetic/hf:meta-llama/Llama-3.3-70B-Instruct"]}
+    - {"synthetic/hf:meta-llama/Llama-3.3-70B-Instruct": ["synthetic/hf:openai/gpt-oss-120b"]}
+    - {"zenmux/anthropic/claude-opus-4.6": ["zenmux/anthropic/claude-sonnet-4.6"]}
+    - {"zenmux/anthropic/claude-sonnet-4.6": ["zenmux/anthropic/claude-haiku-4.5"]}
+    - {"qianfan/ernie-4.5-turbo-128k": ["qianfan/ernie-4.5-turbo-32k"]}
+    - {"qianfan/ernie-4.5-turbo-32k": ["qianfan/ernie-speed-pro-128k"]}
+    - {"cfgateway/anthropic/claude-opus-4-6": ["cfgateway/anthropic/claude-sonnet-4-6"]}
+    - {"cfgateway/anthropic/claude-sonnet-4-6": ["cfgateway/anthropic/claude-haiku-4-5"]}
     # Copilot, SuperGrok, Perplexity fallbacks (registered dynamically)
   num_retries: 3
   retry_after: 30
