@@ -17,7 +17,7 @@ from decepticon.tools.web.jwt import (
     parse_token,
 )
 from decepticon.tools.web.oauth import analyze_oauth_callback
-from decepticon.tools.web.session import analyze_cookie
+from decepticon.tools.web.session import analyze_cookie, login_with_csrf
 
 
 def _json(data: Any) -> str:
@@ -243,6 +243,53 @@ def http_history(query: str = "", last_n: int = 10) -> str:
     return _json(entries[-last_n:])
 
 
+@tool
+def csrf_login(
+    login_url: str,
+    username: str,
+    password: str,
+    token_field: str = "",
+    username_field: str = "username",
+    password_field: str = "password",
+    extra_data_json: str = "{}",
+) -> str:
+    """Login to a web form that uses CSRF tokens (DVWA, PHP apps, etc.).
+
+    GETs the login page, extracts the hidden CSRF token, POSTs credentials
+    with the token, and returns session cookies + success status.
+
+    Args:
+        login_url: Full URL to the login page (e.g. http://target/login.php)
+        username: Login username
+        password: Login password
+        token_field: Specific hidden CSRF field name (auto-detect if empty).
+            Common values: user_token, csrf_token, _token, csrfmiddlewaretoken
+        username_field: Form field name for username (default: username)
+        password_field: Form field name for password (default: password)
+        extra_data_json: Additional form fields as JSON string
+
+    Returns:
+        JSON with success, session_cookies, response_url, token_found, error
+    """
+    import json
+
+    try:
+        extra = json.loads(extra_data_json) if extra_data_json else {}
+    except json.JSONDecodeError:
+        extra = {}
+
+    result = login_with_csrf(
+        login_url=login_url,
+        username=username,
+        password=password,
+        token_field=token_field or None,
+        username_field=username_field,
+        password_field=password_field,
+        extra_data=extra or None,
+    )
+    return json.dumps(result, indent=2, default=str)
+
+
 WEB_TOOLS = [
     jwt_parse,
     jwt_forge,
@@ -252,4 +299,5 @@ WEB_TOOLS = [
     cookie_audit,
     http_request,
     http_history,
+    csrf_login,
 ]

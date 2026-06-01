@@ -323,22 +323,20 @@ def login_with_csrf(
 
         result["token_found"] = True
 
-        # Step 2: Detect submit button
+        # Step 2: Detect submit button - find the submit input tag, extract attrs
         if not submit_field:
-            submit_match = re.search(
-                r'<input[^>]*type=["\']submit["\'][^>]*name=["\']([^"\']+)["\'][^>]*value=["\']([^"\']*)["\']',
+            submit_tag = re.search(
+                r'<input[^>]*type=["\']submit["\'][^>]*>',
                 html,
                 re.IGNORECASE,
             )
-            if not submit_match:
-                submit_match = re.search(
-                    r'<input[^>]*name=["\']([^"\']+)["\'][^>]*type=["\']submit["\'][^>]*value=["\']([^"\']*)["\']',
-                    html,
-                    re.IGNORECASE,
-                )
-            if submit_match:
-                submit_field = submit_match.group(1)
-                submit_value = submit_match.group(2) or submit_field
+            if submit_tag:
+                tag = submit_tag.group(0)
+                name_m = re.search(r'name=["\']([^"\']+)["\']', tag, re.IGNORECASE)
+                value_m = re.search(r'value=["\']([^"\']*)["\']', tag, re.IGNORECASE)
+                if name_m:
+                    submit_field = name_m.group(1)
+                    submit_value = value_m.group(1) if value_m else submit_field
 
         # Step 3: Build POST data
         post_data: dict[str, str] = {

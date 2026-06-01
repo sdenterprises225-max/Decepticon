@@ -25,8 +25,12 @@ services:
       - "127.0.0.1:${LITELLM_PORT:-4000}:4000"
     env_file: .env
     environment:
-      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-decepticon-master}
-      - LITELLM_SALT_KEY=${LITELLM_SALT_KEY:-sk-decepticon-salt}
+      # LITELLM_MASTER_KEY / LITELLM_SALT_KEY intentionally omitted here.
+      # They are sourced from env_file: .env above. Declaring them again
+      # under `environment:` causes Docker Compose to inject the raw
+      # template string (with U+2026 ellipsis characters if the .env
+      # key was ever truncated) which corrupts the key inside the
+      # container and breaks LiteLLM master-key auth with a 401.
       - CODEX_AUTH_PATH=/root/.codex/auth.json
       - DATABASE_URL=postgresql://decepticon:${POSTGRES_PASSWORD:-decepticon}@postgres:5432/litellm
     depends_on:

@@ -670,6 +670,26 @@ model_list:
   # everyone else.
 
   # ── Qwen via Dialagram (OpenAI-compatible) ─────────────────────────
+  - model_name: openai/qwen-3.7-max
+    litellm_params:
+      model: openai/qwen-3.7-max
+      api_key: os.environ/OPENAI_API_KEY
+      api_base: https://dialagram.me/router/v1
+      max_tokens: 32000
+    model_info:
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
+
+  - model_name: openai/qwen-3.7-max-thinking
+    litellm_params:
+      model: openai/qwen-3.7-max-thinking
+      api_key: os.environ/OPENAI_API_KEY
+      api_base: https://dialagram.me/router/v1
+      max_tokens: 64000
+    model_info:
+      input_cost_per_token: 0.000005
+      output_cost_per_token: 0.000025
+
   - model_name: openai/qwen-3.7-max-preview
     litellm_params:
       model: openai/qwen-3.7-max-preview
