@@ -691,4 +691,3 @@ class Objective(BaseModel):
     # New fields (Claude Code Task patterns)
     blocked_by: list[str] = Field(default_factory=list, description="Objective IDs that must complete first")
     owner: str = Field(default="", description="Sub-agent currently executing this objective")
-```

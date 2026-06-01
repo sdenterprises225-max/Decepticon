@@ -44,6 +44,12 @@ class MiddlewareSlot(StrEnum):
     SUMMARIZATION = "summarization"
     PROMPT_CACHING = "prompt-caching"
     PATCH_TOOL_CALLS = "patch-tool-calls"
+    # M4: Per-engagement Neo4j user + sandbox container lifecycle.
+    # Runs in before_agent to provision scoped Bolt credentials (and
+    # optionally a per-engagement sandbox container) before any tool
+    # call hits the knowledge graph. Gated by DECEPTICON_M4_ENABLED=1;
+    # slot factory returns None when disabled so the assembler skips it.
+    M4_LIFECYCLE = "m4-lifecycle"
 
 
 SAFETY_CRITICAL_SLOTS: frozenset[MiddlewareSlot] = frozenset(
@@ -142,6 +148,11 @@ _BASH_AGENT_SLOTS: frozenset[MiddlewareSlot] = _BASE_SLOTS | {
     MiddlewareSlot.HITL_APPROVAL,
 }
 
+# M4 lifecycle slot — added to the orchestrator and bash agents that
+# write to the knowledge graph. The slot factory returns None when
+# DECEPTICON_M4_ENABLED is falsy, so the assembler silently skips it.
+_M4_SLOT: frozenset[MiddlewareSlot] = frozenset({MiddlewareSlot.M4_LIFECYCLE})
+
 
 SLOTS_PER_ROLE: dict[str, frozenset[MiddlewareSlot]] = {
     # ── Standard orchestrator ──
@@ -151,32 +162,32 @@ SLOTS_PER_ROLE: dict[str, frozenset[MiddlewareSlot]] = {
         MiddlewareSlot.SUBAGENT,
         MiddlewareSlot.OPPLAN,
         MiddlewareSlot.MODEL_OVERRIDE,
-        MiddlewareSlot.HITL_APPROVAL,
-    },
+    }
+    | _M4_SLOT,
     # ── Standard non-bash agent (planning + interview) ──
     "soundwave": _BASE_SLOTS | {MiddlewareSlot.ENGAGEMENT_CONTEXT},
     # ── Standard bash-executing specialists ──
-    "recon": _BASH_AGENT_SLOTS,
-    "exploit": _BASH_AGENT_SLOTS,
-    "postexploit": _BASH_AGENT_SLOTS,
-    "analyst": _BASH_AGENT_SLOTS,
-    "reverser": _BASH_AGENT_SLOTS,
-    "contract_auditor": _BASH_AGENT_SLOTS,
-    "cloud_hunter": _BASH_AGENT_SLOTS,
-    "ad_operator": _BASH_AGENT_SLOTS,
-    "phisher": _BASH_AGENT_SLOTS,
-    "mobile_operator": _BASH_AGENT_SLOTS,
-    "wireless_operator": _BASH_AGENT_SLOTS,
+    "recon": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "exploit": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "postexploit": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "analyst": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "reverser": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "contract_auditor": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "cloud_hunter": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "ad_operator": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "phisher": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "mobile_operator": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "wireless_operator": _BASH_AGENT_SLOTS | _M4_SLOT,
     # ── Plugin orchestrator (no EngagementContext per the existing
     # vulnresearch factory — it consumes its parent's context) ──
     "vulnresearch": _BASE_SLOTS | {MiddlewareSlot.SUBAGENT, MiddlewareSlot.OPPLAN},
     # ── Plugin read-only specialist (no bash, no SandboxNotification) ──
     "detector": _BASE_SLOTS,
     # ── Plugin bash-executing specialists ──
-    "verifier": _BASH_AGENT_SLOTS,
-    "patcher": _BASH_AGENT_SLOTS,
-    "scanner": _BASH_AGENT_SLOTS,
-    "exploiter": _BASH_AGENT_SLOTS,
+    "verifier": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "patcher": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "scanner": _BASH_AGENT_SLOTS | _M4_SLOT,
+    "exploiter": _BASH_AGENT_SLOTS | _M4_SLOT,
 }
 """Role → slot-set mapping. The assembler only walks slots present in
 the role's set; anything else is skipped silently. Plugin agents

@@ -17,6 +17,7 @@ import (
 	"github.com/PurpleAILAB/Decepticon/clients/launcher/internal/engagement"
 	"github.com/PurpleAILAB/Decepticon/clients/launcher/internal/health"
 	"github.com/PurpleAILAB/Decepticon/clients/launcher/internal/platform"
+	"github.com/PurpleAILAB/Decepticon/clients/launcher/internal/sandbox"
 	"github.com/PurpleAILAB/Decepticon/clients/launcher/internal/starprompt"
 	"github.com/PurpleAILAB/Decepticon/clients/launcher/internal/ui"
 	"github.com/PurpleAILAB/Decepticon/clients/launcher/internal/updater"
@@ -192,6 +193,12 @@ func runStart(cmd *cobra.Command, args []string) error {
 	if err := os.Setenv("DECEPTICON_ENGAGEMENT_WORKSPACE", choice.WorkspacePath); err != nil {
 		return fmt.Errorf("set engagement workspace env: %w", err)
 	}
+	perEngagementSandbox := sandbox.Enabled(env)
+	if perEngagementSandbox {
+		if err := os.Setenv("SAAS_SANDBOX_URL", sandbox.SandboxURL(choice.Engagement)); err != nil {
+			return fmt.Errorf("set sandbox url env: %w", err)
+		}
+	}
 
 	// 4. Start services
 	c := compose.New()
@@ -204,6 +211,16 @@ func runStart(cmd *cobra.Command, args []string) error {
 	// 5. Health checks
 	if err := health.WaitForServices(env); err != nil {
 		return err
+	}
+	if perEngagementSandbox {
+		ui.Info("Starting per-engagement sandbox...")
+		creds, url, err := sandbox.NewManager(c, env).Ensure(choice.Engagement, choice.WorkspacePath)
+		if err != nil {
+			return fmt.Errorf("per-engagement sandbox: %w", err)
+		}
+		ui.Success("Per-engagement sandbox ready: " + sandbox.ContainerName(choice.Engagement))
+		ui.DimText("LangGraph sandbox URL: " + url)
+		ui.DimText("Cypher user: " + creds.Username)
 	}
 
 	// 6. Launch CLI

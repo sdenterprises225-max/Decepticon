@@ -91,21 +91,23 @@ When `DECEPTICON_SANDBOX_PER_ENGAGEMENT=false` (the default for now),
 nothing changes. Operators opt in via the env var or via the launcher's
 `decepticon onboard` wizard.
 
-## Implementation checklist (when greenlit)
+## Implementation checklist
 
-- [ ] `clients/launcher/cmd/sandbox.go` — new Cobra subcommand with
+- [x] `clients/launcher/cmd/sandbox.go` — new Cobra subcommand with
       start/stop/list.
-- [ ] `clients/launcher/internal/compose/compose.go` — extend
-      `Up` to honor the `DECEPTICON_SANDBOX_PER_ENGAGEMENT` flag and
-      delegate to direct `docker create` calls when on.
-- [ ] `clients/launcher/internal/engagement/` — engagement picker
-      result already carries the slug; just plumb it into the sandbox
-      command dispatch.
-- [ ] `containers/sandbox.Dockerfile` — no changes (the image is
+- [x] `clients/launcher/internal/sandbox/lifecycle.go` — opt-in direct
+      Docker lifecycle for engagement-specific sandboxes.
+- [x] `clients/launcher/cmd/start.go` — honors
+      `DECEPTICON_SANDBOX_PER_ENGAGEMENT`, exports `SAAS_SANDBOX_URL`,
+      rotates a per-engagement Neo4j user, then starts the dedicated
+      sandbox after the base stack is healthy.
+- [x] `docker-compose.yml` — LangGraph accepts `SAAS_SANDBOX_URL` from
+      the launch environment, falling back to `http://sandbox:9999`.
+- [x] `containers/sandbox.Dockerfile` — no changes (the image is
       already engagement-agnostic; only the bind mount differs).
-- [ ] Docs — `docs/architecture/infrastructure.md` updated to describe
-      the per-engagement pattern.
-- [ ] Tests in `clients/launcher/cmd/sandbox_test.go`.
+- [x] `containers/sandbox-entrypoint.sh` — avoids chmodding
+      `/workspace/.secrets` so per-engagement Cypher tokens stay private.
+- [x] Tests in `clients/launcher/internal/sandbox/lifecycle_test.go`.
 
 ## Estimated effort
 

@@ -304,4 +304,3 @@ DockerSandbox.execute_tmux()
       ↓
 CLIRenderer
   └── Kali Linux 스타일 출력 렌더링
-```

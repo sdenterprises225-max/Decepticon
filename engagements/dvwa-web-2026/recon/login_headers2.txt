@@ -1,0 +1,10 @@
+HTTP/1.1 302 Found
+Date: Mon, 01 Jun 2026 04:15:57 GMT
+Server: Apache/2.4.25 (Debian)
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Location: index.php
+Content-Length: 0
+Content-Type: text/html; charset=UTF-8
+

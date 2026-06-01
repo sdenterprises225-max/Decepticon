@@ -1,0 +1,122 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+		<title>DVWA Security :: Damn Vulnerable Web Application (DVWA) v1.10 *Development*</title>
+
+		<link rel="stylesheet" type="text/css" href="dvwa/css/main.css" />
+
+		<link rel="icon" type="\image/ico" href="favicon.ico" />
+
+		<script type="text/javascript" src="dvwa/js/dvwaPage.js"></script>
+
+	</head>
+
+	<body class="home">
+		<div id="container">
+
+			<div id="header">
+
+				<img src="dvwa/images/logo.png" alt="Damn Vulnerable Web Application" />
+
+			</div>
+
+			<div id="main_menu">
+
+				<div id="main_menu_padded">
+				<ul class="menuBlocks"><li class=""><a href=".">Home</a></li>
+<li class=""><a href="instructions.php">Instructions</a></li>
+<li class=""><a href="setup.php">Setup / Reset DB</a></li>
+</ul><ul class="menuBlocks"><li class=""><a href="vulnerabilities/brute/">Brute Force</a></li>
+<li class=""><a href="vulnerabilities/exec/">Command Injection</a></li>
+<li class=""><a href="vulnerabilities/csrf/">CSRF</a></li>
+<li class=""><a href="vulnerabilities/fi/.?page=include.php">File Inclusion</a></li>
+<li class=""><a href="vulnerabilities/upload/">File Upload</a></li>
+<li class=""><a href="vulnerabilities/captcha/">Insecure CAPTCHA</a></li>
+<li class=""><a href="vulnerabilities/sqli/">SQL Injection</a></li>
+<li class=""><a href="vulnerabilities/sqli_blind/">SQL Injection (Blind)</a></li>
+<li class=""><a href="vulnerabilities/weak_id/">Weak Session IDs</a></li>
+<li class=""><a href="vulnerabilities/xss_d/">XSS (DOM)</a></li>
+<li class=""><a href="vulnerabilities/xss_r/">XSS (Reflected)</a></li>
+<li class=""><a href="vulnerabilities/xss_s/">XSS (Stored)</a></li>
+<li class=""><a href="vulnerabilities/csp/">CSP Bypass</a></li>
+<li class=""><a href="vulnerabilities/javascript/">JavaScript</a></li>
+</ul><ul class="menuBlocks"><li class="selected"><a href="security.php">DVWA Security</a></li>
+<li class=""><a href="phpinfo.php">PHP Info</a></li>
+<li class=""><a href="about.php">About</a></li>
+</ul><ul class="menuBlocks"><li class=""><a href="logout.php">Logout</a></li>
+</ul>
+				</div>
+
+			</div>
+
+			<div id="main_body">
+
+				
+<div class="body_padded">
+	<h1>DVWA Security <img src="dvwa/images/lock.png" /></h1>
+	<br />
+
+	<h2>Security Level</h2>
+
+	
+
+	<form action="#" method="POST">
+		<p>Security level is currently: <em>low</em>.<p>
+		<p>You can set the security level to low, medium, high or impossible. The security level changes the vulnerability level of DVWA:</p>
+		<ol>
+			<li> Low - This security level is completely vulnerable and <em>has no security measures at all</em>. It's use is to be as an example of how web application vulnerabilities manifest through bad coding practices and to serve as a platform to teach or learn basic exploitation techniques.</li>
+			<li> Medium - This setting is mainly to give an example to the user of <em>bad security practices</em>, where the developer has tried but failed to secure an application. It also acts as a challenge to users to refine their exploitation techniques.</li>
+			<li> High - This option is an extension to the medium difficulty, with a mixture of <em>harder or alternative bad practices</em> to attempt to secure the code. The vulnerability may not allow the same extent of the exploitation, similar in various Capture The Flags (CTFs) competitions.</li>
+			<li> Impossible - This level should be <em>secure against all vulnerabilities</em>. It is used to compare the vulnerable source code to the secure source code.<br />
+				Prior to DVWA v1.9, this level was known as 'high'.</li>
+		</ol>
+		<select name="security">
+			<option value="low" selected="selected">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="impossible">Impossible</option>
+		</select>
+		<input type="submit" value="Submit" name="seclev_submit">
+		<input type='hidden' name='user_token' value='8db9ab100979dcac4e3cfce6f7014db2' />
+	</form>
+
+	<br />
+	<hr />
+	<br />
+
+	<h2>PHPIDS</h2>
+	
+	<p><a href="https://github.com/PHPIDS/PHPIDS" target="_blank">PHPIDS</a> v0.6 (PHP-Intrusion Detection System) is a security layer for PHP based web applications.</p>
+	<p>PHPIDS works by filtering any user supplied input against a blacklist of potentially malicious code. It is used in DVWA to serve as a live example of how Web Application Firewalls (WAFs) can help improve security and in some cases how WAFs can be circumvented.</p>
+	<p>You can enable PHPIDS across this site for the duration of your session.</p>
+
+	<p>PHPIDS is currently: <em>disabled</em>. [<a href="?phpids=on">Enable PHPIDS</a>]</p>
+	[<a href="?test=%22><script>eval(window.name)</script>">Simulate attack</a>] -
+	[<a href="ids_log.php">View IDS log</a>]
+</div>
+				<br /><br />
+				
+
+			</div>
+
+			<div class="clear">
+			</div>
+
+			<div id="system_info">
+				<div align="left"><em>Username:</em> admin<br /><em>Security Level:</em> low<br /><em>PHPIDS:</em> disabled</div>
+			</div>
+
+			<div id="footer">
+
+				<p>Damn Vulnerable Web Application (DVWA) v1.10 *Development*</p>
+				<script src='/dvwa/js/add_event_listeners.js'></script>
+
+			</div>
+
+		</div>
+
+	</body>
+
+</html>

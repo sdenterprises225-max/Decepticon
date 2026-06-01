@@ -1,0 +1,11 @@
+
+404 /admin
+404 /phpmyadmin
+404 /backup
+404 /.git
+404 /config.php.bak
+404 /database.sql
+404 /wp-admin
+404 /administrator
+404 /README
+404 /CHANGELOG

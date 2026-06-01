@@ -1,0 +1,11 @@
+# Nmap 7.99 scan initiated Mon Jun  1 05:26:30 2026 as: /usr/lib/nmap/nmap -sV -p- --top-ports 1000 -oN /workspace/recon/nmap_scan.txt dvwa-test
+Nmap scan report for dvwa-test (192.168.155.6)
+Host is up (0.0000050s latency).
+rDNS record for 192.168.155.6: dvwa-test.decepticon_sandbox-net
+Not shown: 999 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+80/tcp open  http    Apache httpd 2.4.25 ((Debian))
+MAC Address: 6A:8B:90:F6:66:13 (Unknown)
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Mon Jun  1 05:26:36 2026 -- 1 IP address (1 host up) scanned in 6.31 seconds
