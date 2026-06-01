@@ -378,6 +378,7 @@ services:
       # the LiteLLM container's job.
       - ${CLAUDE_CREDENTIALS_VOLUME:-/dev/null}:/root/.claude/.credentials.json:ro
       - ${CODEX_AUTH_VOLUME:-/dev/null}:/root/.codex/auth.json:ro
+      - ./packages:/app/packages
     # Wait for litellm to be healthy: langgraph has retry logic but the launcher
     # uses `compose up --wait` and needs healthy as the single readiness signal.
     depends_on:

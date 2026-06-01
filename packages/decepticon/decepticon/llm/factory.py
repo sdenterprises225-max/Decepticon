@@ -219,7 +219,7 @@ _OAUTH_METHOD_ENV: dict[AuthMethod, str] = {
 # didn't emit (e.g. a user pasting ``sk-ant-not-used`` into .env).
 _KEY_PREFIX_HINTS: dict[AuthMethod, tuple[str, ...]] = {
     AuthMethod.ANTHROPIC_API: ("sk-ant-",),
-    AuthMethod.OPENAI_API: ("sk-",),
+    AuthMethod.OPENAI_API: ("sk-", "dgr_"),
     AuthMethod.GOOGLE_API: ("AIza",),
     AuthMethod.XAI_API: ("xai-",),
     AuthMethod.GROQ_API: ("gsk_",),

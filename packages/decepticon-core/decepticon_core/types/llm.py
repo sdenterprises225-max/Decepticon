@@ -18,7 +18,7 @@ Examples
 --------
 User has [anthropic_api, openai_api]. Profile=eco.
   decepticon (HIGH) → primary=anthropic/claude-opus-4-7, fallback=openai/gpt-5.5
-  recon (LOW)       → primary=anthropic/claude-haiku-4-5, fallback=openai/gpt-5-nano
+  recon (LOW)       → primary=openai/qwen-3.6-plus, fallback=openai/qwen-3.5-plus
 
 User has [anthropic_oauth, anthropic_api]. Profile=eco.
   decepticon (HIGH) → primary=auth/claude-opus-4-7, fallback=anthropic/claude-opus-4-7
@@ -175,12 +175,12 @@ METHOD_MODELS: dict[AuthMethod, dict[Tier, str]] = {
     AuthMethod.ANTHROPIC_API: {
         Tier.HIGH: "anthropic/claude-opus-4-7",
         Tier.MID: "anthropic/claude-sonnet-4-6",
-        Tier.LOW: "anthropic/claude-haiku-4-5",
+        Tier.LOW: "openai/qwen-3.6-plus",
     },
     AuthMethod.ANTHROPIC_OAUTH: {
         Tier.HIGH: "auth/claude-opus-4-7",
         Tier.MID: "auth/claude-sonnet-4-6",
-        Tier.LOW: "auth/claude-haiku-4-5",
+        Tier.LOW: "openai/qwen-3.6-plus",  # Kept for auth path
     },
     AuthMethod.OPENAI_API: {
         Tier.HIGH: "openai/gpt-5.5",
@@ -228,7 +228,7 @@ METHOD_MODELS: dict[AuthMethod, dict[Tier, str]] = {
     AuthMethod.OPENROUTER_API: {
         Tier.HIGH: "openrouter/anthropic/claude-opus-4-7",
         Tier.MID: "openrouter/anthropic/claude-sonnet-4-6",
-        Tier.LOW: "openrouter/anthropic/claude-haiku-4-5",
+        Tier.LOW: "openai/qwen-3.6-plus",
     },
     AuthMethod.NVIDIA_API: {
         Tier.HIGH: "nvidia_nim/meta/llama-3.3-70b-instruct",
